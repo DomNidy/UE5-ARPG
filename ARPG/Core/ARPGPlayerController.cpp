@@ -63,6 +63,8 @@ void AARPGPlayerController::SetupInputComponent()
 
 void AARPGPlayerController::PostProcessInput(const float DeltaTime, const bool bGamePaused)
 {
+	Super::PostProcessInput(DeltaTime, bGamePaused);
+
 	if (AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>())
 	{
 		UARPGAbilitySystemComponent* ASC = CastChecked<UARPGAbilitySystemComponent>(PS->GetAbilitySystemComponent());

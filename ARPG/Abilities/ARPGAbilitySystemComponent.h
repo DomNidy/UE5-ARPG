@@ -17,14 +17,31 @@ class ARPG_API UARPGAbilitySystemComponent : public UAbilitySystemComponent
 public:
 	UARPGAbilitySystemComponent();
 
+	/**
+	 * @brief Call this when a player character triggers an ability input.
+	 *		  This method finds the AbilitySpec associated with the input tag
+	 *		  and stores its spec handle for later processing.
+	 *
+	 * @param AbilityInputTag the input tag of the ability that was pressed
+	 */
+	virtual void AbilityInputTagPressed(FGameplayTag AbilityInputTag);
 
-	virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
-	virtual void AbilitySpecInputReleased(FGameplayAbilitySpec& Spec) override;
+	/**
+	 * @brief Call this when a player character releases an ability input.
+	 *		  This method finds the AbilitySpec associated with the input tag
+	 *		  and stores its spec handle for later processing.
+	 *
+	 * @param AbilityInputTag the input tag of the ability that was released
+	 */
+	virtual void AbilityInputTagReleased(FGameplayTag AbilityInputTag);
 
-
-	virtual void AbilityInputTagPressed(FGameplayTag InputTag);
-	virtual void AbilityInputTagReleased(FGameplayTag InputTag);
-
+	/**
+	 * @brief Call this to process all accumulated ability-related inputs.
+	 *		  This handles activating abilities, and forwards the ability-related input events to the server.
+	 * 
+	 * @param DeltaTime is the delta since the last tick, not the last time inputs were processed
+	 * @param bGamePaused is the game paused?
+	 */
 	virtual void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
 
 private:
@@ -36,12 +53,6 @@ private:
 
 	/** Array of ability specs that have had their input released and are waiting to be processed */
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
-
-	/**
-	 * @brief Array of abilities that we will call TryActivateAbility on
-	 * This is used internally by ProcessAbilityInput
-	 */
-	
 
 	/**
 	 * @brief Clear all ability input awaiting processing

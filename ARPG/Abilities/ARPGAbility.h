@@ -11,7 +11,7 @@ UENUM()
 enum class EARPGAbilityActivationPolicy : uint8 {
 	OnInputPressed UMETA(DisplayName = "Ability is activated when it's input is pressed/triggered"),
 	OnInputReleased UMETA(DisplayName = "Ability is activated when it's input is released"),
-	WhileInputActive UMETA(DisplayName = "Ability is activated while it's input is held down")
+	WhileInputActive UMETA(DisplayName = "Ability is repeatedly activate while it's input is held down")
 };
 
 /**

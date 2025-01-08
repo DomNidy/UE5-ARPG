@@ -10,7 +10,7 @@ AARPGPlayerState::AARPGPlayerState()
 
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
-	SetNetUpdateFrequency(100.f);
+	SetNetUpdateFrequency(2.f);
 
 	HealthAttributeSet = CreateDefaultSubobject<UARPGHealthAttributeSet>(TEXT("HealthAttributeSet"));
 }
