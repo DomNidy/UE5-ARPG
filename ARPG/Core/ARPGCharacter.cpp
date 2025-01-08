@@ -2,6 +2,7 @@
 
 #include "ARPGCharacter.h"
 #include "UObject/ConstructorHelpers.h"
+#include "ARPGNativeGameplayTags.h"
 #include "Camera/CameraComponent.h"
 #include "Components/DecalComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -12,7 +13,8 @@
 #include "Engine/World.h"
 #include "Logging/StructuredLog.h"
 #include "ARPGPlayerState.h"
-#include <MVVMGameSubsystem.h>
+#include "MVVMGameSubsystem.h"
+#include "ARPG/Input/ARPGEnhancedInputComponent.h"
 
 AARPGCharacter::AARPGCharacter()
 {
@@ -53,6 +55,7 @@ AARPGCharacter::AARPGCharacter()
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	SetNetUpdateFrequency(100.f);
+
 }
 
 void AARPGCharacter::Tick(float DeltaSeconds)
@@ -63,6 +66,18 @@ void AARPGCharacter::Tick(float DeltaSeconds)
 UAbilitySystemComponent* AARPGCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+void AARPGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	check(InputConfig);
+
+	UARPGEnhancedInputComponent* EnhancedInputComponent = CastChecked<UARPGEnhancedInputComponent>(PlayerInputComponent);
+
+	TArray<uint32> BindHandles;
+	EnhancedInputComponent->BindAbilityActions(InputConfig, this, &ThisClass::Input_AbilityInputTagPressed, &ThisClass::Input_AbilityInputTagReleased, BindHandles);
 }
 
 // Server only: called when the hero is possessed by a controller (could be player or ai)
@@ -93,3 +108,34 @@ void AARPGCharacter::OnRep_PlayerState()
 		PS->GetAbilitySystemComponent()->InitAbilityActorInfo(PS, this);
 	}
 }
+
+void AARPGCharacter::Input_AbilityInputTagPressed(FGameplayTag InputTag)
+{
+	UE_LOG(LogTemp, Log, TEXT("------ Input_AbilityInputTagPressed: %s"), *InputTag.GetTagName().ToString());
+	if (AbilitySystemComponent)
+	{
+
+		if (AbilitySystemComponent->HasMatchingGameplayTag(Status_Block_AbilityInput))
+		{
+			return;
+		}
+
+		AbilitySystemComponent->AbilityInputTagPressed(InputTag);
+	}
+}
+
+void AARPGCharacter::Input_AbilityInputTagReleased(FGameplayTag InputTag)
+{
+	UE_LOG(LogTemp, Log, TEXT("------ Input_AbilityInputTagReleased: %s"), *InputTag.GetTagName().ToString());
+
+	if (AbilitySystemComponent)
+	{
+		if (AbilitySystemComponent->HasMatchingGameplayTag(Status_Block_AbilityInput))
+		{
+			return;
+		}
+
+		AbilitySystemComponent->AbilityInputTagReleased(InputTag);
+	}
+}
+

@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "ARPG/Abilities/ARPGAbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
+#include "ARPG/Input/ARPGInputConfig.h"
 #include "ARPGCharacter.generated.h"
 
 UCLASS(Blueprintable)
@@ -28,13 +29,26 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	//~ End IAbilitySystemInterface
 
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+
+	
+
 
 protected:
 	/** ASC for the player's character. Managed by the player state */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	UARPGAbilitySystemComponent* AbilitySystemComponent;
+
+	/** Input config data asset. This should probably be moved elsewhere */
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UARPGInputConfig* InputConfig;
+
+
+	/** Callback functions executed when ability inputs are pressed/released */
+	void Input_AbilityInputTagReleased(FGameplayTag InputTag);
+	void Input_AbilityInputTagPressed(FGameplayTag InputTag);
 
 private:
 	/** Top down camera */

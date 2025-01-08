@@ -5,4 +5,11 @@
 
 UARPGAbility::UARPGAbility()
 {
+	
 }
+
+EARPGAbilityActivationPolicy UARPGAbility::GetActivationPolicy() const
+{
+	return ActivationPolicy;
+}
+

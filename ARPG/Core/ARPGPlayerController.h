@@ -47,6 +47,7 @@ protected:
 	uint32 bMoveToMouseCursor : 1;
 
 	virtual void SetupInputComponent() override;
+	virtual void PostProcessInput(const float DeltaTime, const bool bGamePaused) override;
 	
 	// To add mapping context
 	virtual void BeginPlay();

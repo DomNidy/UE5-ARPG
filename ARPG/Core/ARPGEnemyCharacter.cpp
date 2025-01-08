@@ -85,8 +85,6 @@ void AARPGEnemyCharacter::GrantInitialAbilitySets()
 
 void AARPGEnemyCharacter::HandleCoreAttributeValueChanged(const FOnAttributeChangeData& Data)
 {
-	// TODO: We should create some kind of health bar widget for enemy characters, then update the widget values here!
-
 	// Update the view model with new attribute values
 	if (Data.Attribute == UARPGHealthAttributeSet::GetHealthAttribute())
 	{

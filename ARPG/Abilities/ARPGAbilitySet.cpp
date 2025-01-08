@@ -21,9 +21,12 @@ void UARPGAbilitySet::GiveToAbilitySystem(UARPGAbilitySystemComponent* ASC, FARP
 		return;
 	}
 
+
+
+
 	GrantAttributeSets(ASC, OutGrantedHandles);
 	GrantGameplayEffects(ASC, OutGrantedHandles);
-	GrantGameplayAbilities(ASC, OutGrantedHandles);
+	GrantGameplayAbilities(ASC, OutGrantedHandles, SourceObject);
 }
 
 const TArray<FARPGAbilitySet_GameplayAbility>& UARPGAbilitySet::GetGameplayAbilities() const
@@ -52,49 +55,8 @@ void FARPGAbilitySet_GrantedHandles::TakeAbilityFromAbilitySystem(UARPGAbilitySy
 }
 
 
-#if WITH_EDITOR
-void UARPGAbilitySet::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-	if (!PropertyChangedEvent.Property)
-	{
-		UE_LOGFMT(LogTemp, Log, "UARPGAbilitySet post edit change property handler ran, but property was null");
-		return;
-	}
 
-	// Get name of property and ensure it exists in the ability set class, return if it doesn't
-	const FName PropertyName = PropertyChangedEvent.Property->GetFName();
-	if (PropertyName != GET_MEMBER_NAME_CHECKED(UARPGAbilitySet, GrantedGameplayAbilities))
-	{
-		UE_LOGFMT(LogTemp, Log, "UARPGAbilitySet post edit change property handler ran, but property name {0} was not equal to the checked property name", PropertyName);
-		return;
-	}
-
-	if (GrantedGameplayAbilities.IsEmpty())
-	{
-		UE_LOGFMT(LogTemp, Log, "UARPGAbilitySet post edit change property handler ran, but granted gameplay abilities array is empty");
-		return;
-	}
-
-	// Create copy of the granted abilities array, and clear current array in the ability set
-	TArray<FARPGAbilitySet_GameplayAbility> AbilitiesCopy = GrantedGameplayAbilities;
-	GrantedGameplayAbilities.Reset();
-	GrantedGameplayAbilities.Reserve(AbilitiesCopy.Num());
-
-	// Iterate over each gameplay ability in the copy
-	for (int32 Index = 0; Index < AbilitiesCopy.Num(); ++Index)
-	{
-		FARPGAbilitySet_GameplayAbility& Ability = AbilitiesCopy[Index];
-
-		// Assign input ID and add it back to the granted abilities array
-		Ability.InputID = Index;
-		GrantedGameplayAbilities.Add(Ability);
-		UE_LOGFMT(LogTemp, Log, "Automatically assigned input id {0} to a gameplay ability in ability set {1}", Ability.InputID, GetName());
-	}
-}
-#endif
-
-void UARPGAbilitySet::GrantGameplayAbilities(UARPGAbilitySystemComponent* ASC, FARPGAbilitySet_GrantedHandles& OutGrantedHandles) const
+void UARPGAbilitySet::GrantGameplayAbilities(UARPGAbilitySystemComponent* ASC, FARPGAbilitySet_GrantedHandles& OutGrantedHandles, UObject* SourceObject) const
 {
 	check(ASC);
 
@@ -105,17 +67,23 @@ void UARPGAbilitySet::GrantGameplayAbilities(UARPGAbilitySystemComponent* ASC, F
 
 		if (!IsValid(AbilityToGrant.Ability))
 		{
-			UE_LOGFMT(LogTemp, Log, "Tried to grant a gameplay ability from an ability set, but the pointer to the underlying gameplay ability is invalid, skipping this one");
+			UE_LOGFMT(LogTemp, Error, "Tried to grant a gameplay ability from an ability set, but the pointer to the underlying gameplay ability is invalid, skipping this one");
 			continue;
 		}
 
-		// Get CDO of the ability
-		UGameplayAbility* NewAbility = AbilityToGrant.Ability.GetDefaultObject();
+		if (!AbilityToGrant.InputTag.IsValid())
+		{
+			UE_LOG(LogTemp, Error, TEXT("Tried to grant a gameplay ability but the associated input tag was invalid."));
+		}
 
-		FGameplayAbilitySpec AbilitySpec(NewAbility, AbilityToGrant.AbilityLevel, AbilityToGrant.InputID);
+		// Get CDO of the ability
+		UARPGAbility* AbilityCDO = AbilityToGrant.Ability->GetDefaultObject<UARPGAbility>();
+
+		FGameplayAbilitySpec AbilitySpec(AbilityCDO, AbilityToGrant.AbilityLevel);
+		AbilitySpec.SourceObject = SourceObject;
+		AbilitySpec.GetDynamicSpecSourceTags().AddTag(AbilityToGrant.InputTag);
 
 		const FGameplayAbilitySpecHandle AbilitySpecHandle = ASC->GiveAbility(AbilitySpec);
-
 
 		OutGrantedHandles.AddAbilitySpecHandle(AbilitySpecHandle);
 	}

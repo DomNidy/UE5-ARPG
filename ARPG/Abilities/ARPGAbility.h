@@ -6,8 +6,16 @@
 #include "Abilities/GameplayAbility.h"
 #include "ARPGAbility.generated.h"
 
+
+UENUM()
+enum class EARPGAbilityActivationPolicy : uint8 {
+	OnInputPressed UMETA(DisplayName = "Ability is activated when it's input is pressed/triggered"),
+	OnInputReleased UMETA(DisplayName = "Ability is activated when it's input is released"),
+	WhileInputActive UMETA(DisplayName = "Ability is activated while it's input is held down")
+};
+
 /**
- * 
+ *
  */
 UCLASS()
 class ARPG_API UARPGAbility : public UGameplayAbility
@@ -16,4 +24,10 @@ class ARPG_API UARPGAbility : public UGameplayAbility
 
 public:
 	UARPGAbility();
+
+	EARPGAbilityActivationPolicy GetActivationPolicy() const;
+
+private:
+	UPROPERTY(EditDefaultsOnly)
+	EARPGAbilityActivationPolicy ActivationPolicy;
 };

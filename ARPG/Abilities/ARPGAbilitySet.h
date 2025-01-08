@@ -43,36 +43,8 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	int32 AbilityLevel{ 1 };
 
-	// Input action that triggers this ability
 	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UInputAction> InputAction;
-
-	// This will be generated automatically
-	UPROPERTY()
-	int32 InputID = INDEX_NONE;
-
-	// Check if ability has been setup properly such that we can bind it to an input action
-	// in the player's input component
-	bool IsValidToBindInput() const
-	{
-		if (InputID != INDEX_NONE && InputAction && Ability)
-		{
-			return true;
-		}
-		return false;
-	}
-
-	FString ToString() const
-	{
-		return FString::Printf(
-			TEXT("Ability: %s, AbilityLevel: %d, InputAction: %s, InputID: %d"),
-			*GetNameSafe(Ability.Get()),
-			AbilityLevel,
-			*GetNameSafe(InputAction.Get()),
-			InputID
-		);
-	}
-
+	FGameplayTag InputTag;
 };
 
 /**
@@ -178,18 +150,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	const TArray<FARPGAbilitySet_GameplayAbility>& GetGameplayAbilities() const;
 
-#if WITH_EDITOR
-	/**
-	 * Runs whenever this data asset has a property updated (in the editor details panel)
-	 *	This is mostly here for convenience, as we can automatically assign Input IDs to
-	 *  abilities when this gets updated in the editor.
-	 */
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif
 
 protected:
 	// Grant all abilities in this set to the provided ASC
-	void GrantGameplayAbilities(UARPGAbilitySystemComponent* ASC, FARPGAbilitySet_GrantedHandles& OutGrantedHandles) const;
+	void GrantGameplayAbilities(UARPGAbilitySystemComponent* ASC, FARPGAbilitySet_GrantedHandles& OutGrantedHandles, UObject* SourceObject) const;
 
 	// Grant (apply) all gameplay effects in this set to the provided ASC
 	void GrantGameplayEffects(UARPGAbilitySystemComponent* ASC, FARPGAbilitySet_GrantedHandles& OutGrantedHandles) const;

@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "EnhancedInputSubsystems.h"
+#include "ARPGPlayerState.h"
 #include "Engine/LocalPlayer.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -60,6 +61,16 @@ void AARPGPlayerController::SetupInputComponent()
 	}
 }
 
+void AARPGPlayerController::PostProcessInput(const float DeltaTime, const bool bGamePaused)
+{
+	if (AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>())
+	{
+		UARPGAbilitySystemComponent* ASC = CastChecked<UARPGAbilitySystemComponent>(PS->GetAbilitySystemComponent());
+
+		ASC->ProcessAbilityInput(DeltaTime, bGamePaused);
+	}
+}
+
 void AARPGPlayerController::OnInputStarted()
 {
 	StopMovement();
@@ -70,7 +81,7 @@ void AARPGPlayerController::OnSetDestinationTriggered()
 {
 	// We flag that the input is being pressed
 	FollowTime += GetWorld()->GetDeltaSeconds();
-	
+
 	// We look for the location in the world where the player has pressed the input
 	FHitResult Hit;
 	bool bHitSuccessful = false;
@@ -88,7 +99,7 @@ void AARPGPlayerController::OnSetDestinationTriggered()
 	{
 		CachedDestination = Hit.Location;
 	}
-	
+
 	// Move towards mouse pointer or touch
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn != nullptr)
