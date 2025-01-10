@@ -86,6 +86,7 @@ void UARPGAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 	//   3. Need to make sure the activation policy allows the ability to be activated while it's input is held down
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputHeldSpecHandles)
 	{
+	
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
 			if (AbilitySpec->Ability && !AbilitySpec->IsActive())

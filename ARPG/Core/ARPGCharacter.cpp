@@ -56,11 +56,26 @@ AARPGCharacter::AARPGCharacter()
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	SetNetUpdateFrequency(100.f);
 
+	// Setup character weapon mesh component
+	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+	WeaponMesh->SetSimulatePhysics(false);
+	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WeaponMesh->SetupAttachment(RootComponent);
 }
 
 void AARPGCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+}
+
+void AARPGCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	if (WeaponMesh && GetMesh())
+	{
+		FAttachmentTransformRules WeaponMeshAttachmentRules(EAttachmentRule::SnapToTarget, false);
+		WeaponMesh->AttachToComponent(GetMesh(), WeaponMeshAttachmentRules, FName("weapon_r"));
+	}
 }
 
 UAbilitySystemComponent* AARPGCharacter::GetAbilitySystemComponent() const
@@ -80,7 +95,7 @@ void AARPGCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	EnhancedInputComponent->BindAbilityActions(InputConfig, this, &ThisClass::Input_AbilityInputTagPressed, &ThisClass::Input_AbilityInputTagReleased, BindHandles);
 }
 
-// Server only: called when the hero is possessed by a controller (could be player or ai)
+// Server only: called when the character is possessed by a controller (could be player or ai)
 void AARPGCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
@@ -107,6 +122,11 @@ void AARPGCharacter::OnRep_PlayerState()
 
 		PS->GetAbilitySystemComponent()->InitAbilityActorInfo(PS, this);
 	}
+}
+
+UStaticMeshComponent* AARPGCharacter::GetWeaponMesh() const
+{
+	return WeaponMesh;
 }
 
 void AARPGCharacter::Input_AbilityInputTagPressed(FGameplayTag InputTag)
