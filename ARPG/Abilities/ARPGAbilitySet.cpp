@@ -21,9 +21,6 @@ void UARPGAbilitySet::GiveToAbilitySystem(UARPGAbilitySystemComponent* ASC, FARP
 		return;
 	}
 
-
-
-
 	GrantAttributeSets(ASC, OutGrantedHandles);
 	GrantGameplayEffects(ASC, OutGrantedHandles);
 	GrantGameplayAbilities(ASC, OutGrantedHandles, SourceObject);
