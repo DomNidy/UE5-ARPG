@@ -121,6 +121,7 @@ void UARPGAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 					// Check if this ability should activate when input is triggered
 					const UARPGAbility* AbilityCDO = CastChecked<UARPGAbility>(AbilitySpec->Ability);
 
+
 					if (AbilityCDO->GetActivationPolicy() == EARPGAbilityActivationPolicy::OnInputPressed)
 					{
 						UE_LOGFMT(LogTemp, Log, "InputPressedSpecHandles - Added handle for ability {0}", AbilityCDO->GetName());

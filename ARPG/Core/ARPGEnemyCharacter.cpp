@@ -89,16 +89,12 @@ void AARPGEnemyCharacter::HandleCoreAttributeValueChanged(const FOnAttributeChan
 	if (Data.Attribute == UARPGHealthAttributeSet::GetHealthAttribute())
 	{
 		UE_LOG(LogTemp, Log, TEXT("Enemy Core attribute changed: Health! %f"), Data.NewValue);
-		GEngine->AddOnScreenDebugMessage(0, 2.f, FColor::Green, FString::Printf(TEXT("Enemy Core attribute changed: Health! %f"), Data.NewValue));
 		// TODO: Update the health bar widget for this enemy
-
 	}
 	else if (Data.Attribute == UARPGHealthAttributeSet::GetHealthMaxAttribute())
 	{
 		UE_LOG(LogTemp, Log, TEXT("Enemy Core attribute changed: HealthMax! %f"), Data.NewValue);
-		GEngine->AddOnScreenDebugMessage(1, 2.f, FColor::Green, FString::Printf(TEXT("Enemy Core attribute changed: Health Max! %f"), Data.NewValue));
 		// TODO: Update the health bar widget for this enemy
-
 	}
 	else
 	{

@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "UARPGAbilityTask_PlayMontageAndWaitForEvent.h"
+#include "ARPGAbilityTask_PlayMontageAndWaitForEvent.h"
 #include "GameFramework/Character.h"
 #include "ARPGAbilitySystemComponent.h"
 
@@ -25,23 +25,7 @@ void UARPGAbilityTask_PlayMontageAndWaitForEvent::Activate()
 	}
 
 	bool bIsLocallyControlled = Ability->IsLocallyControlled();
-	FColor LogColor = bIsLocallyControlled ? FColor::Green : FColor::Cyan;
-
-	FString CurrentTime = FDateTime::Now().ToString(TEXT("%H:%M:%S.%s"));
-	GEngine->AddOnScreenDebugMessage(
-		-1,
-		15.f,
-		LogColor,
-		FString::Printf(TEXT("[%s] UARPGAbilityTask_PlayMontageAndWaitForEvent::Activate()"), *CurrentTime)
-	);
-
-	GEngine->AddOnScreenDebugMessage(
-		-1,
-		15.f,
-		LogColor,
-		FString::Printf(TEXT("[%s] Is locally controlled?: %d"), *CurrentTime, bIsLocallyControlled)
-	);
-
+	
 	UARPGAbilitySystemComponent* ASC = GetTargetASC();
 	if (!ASC)
 	{

@@ -4,7 +4,7 @@
 
 #include "Abilities/Tasks/AbilityTask.h"
 #include "CoreMinimal.h"
-#include "UARPGAbilityTask_PlayMontageAndWaitForEvent.generated.h"
+#include "ARPGAbilityTask_PlayMontageAndWaitForEvent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FARPGPlayMontageAndWaitForEventDelegate, FGameplayTag, EventTag, FGameplayEventData, EventData);
 
