@@ -7,7 +7,10 @@
 #include "ARPG/Abilities/ARPGAbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "ARPG/Input/ARPGInputConfig.h"
+#include "ARPGViewModelPlayerStats.h"
+#include "Components/WidgetComponent.h"
 #include "ARPGCharacter.generated.h"
+
 
 UCLASS(Blueprintable)
 class AARPGCharacter : public ACharacter, public IAbilitySystemInterface
@@ -15,44 +18,74 @@ class AARPGCharacter : public ACharacter, public IAbilitySystemInterface
 	GENERATED_BODY()
 
 public:
+
 	AARPGCharacter();
 
-	// Called every frame.
+	//~ Begin ACharacter
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	//~ End ACharacter
+
+	//~ Begin AActor
 	virtual void Tick(float DeltaSeconds) override;
-
 	virtual void BeginPlay() override;
+	//~ End AActor
 
-	/** Returns TopDownCameraComponent subobject **/
-	FORCEINLINE class UCameraComponent* GetTopDownCameraComponent() const { return TopDownCameraComponent; }
-	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+	//~ Being APawn
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_PlayerState() override;
+	//~ End APawn
 
 	//~ Begin IAbilitySystemInterface
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	//~ End IAbilitySystemInterface
 
-	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-	virtual void PossessedBy(AController* NewController) override;
-	virtual void OnRep_PlayerState() override;
+public:
 
+	/** Returns TopDownCameraComponent subobject **/
+	FORCEINLINE class UCameraComponent* GetTopDownCameraComponent() const { return TopDownCameraComponent; }
+
+	/** Returns CameraBoom subobject **/
+	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+
+	/** Returns WeaponMesh subobject **/
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	UStaticMeshComponent* GetWeaponMesh() const;
+	UStaticMeshComponent* GetWeaponMesh() const { return WeaponMesh; }
+
+	/** Returns the player stats viewmodel for this character */
+	UFUNCTION(BlueprintCallable, Category = "Viewmodel")
+	UARPGViewModelPlayerStats* GetPlayerStatsViewModel() const { return PlayerStatsViewModel; }
 
 protected:
+
 	/** ASC for the player's character. Managed by the player state */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	UARPGAbilitySystemComponent* AbilitySystemComponent;
+
+	/** Widget component for the player healthbar */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	UWidgetComponent* HealthbarWidgetComponent;
 
 	/** Input config data asset. This should probably be moved elsewhere */
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UARPGInputConfig* InputConfig;
 
-
 	/** Callback functions executed when ability inputs are pressed/released */
 	void Input_AbilityInputTagReleased(FGameplayTag InputTag);
 	void Input_AbilityInputTagPressed(FGameplayTag InputTag);
 
+protected:
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnPlayerStatsViewModelUpdated(UARPGViewModelPlayerStats* NewPlayerStatsViewModel);
+
+	/**
+	 * @brief Allows blueprint to know when the ability system component has been updated
+	 */
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnAbilitySystemComponentUpdated(UARPGAbilitySystemComponent* NewAbilitySystemComponent);
+
 private:
+
 	/** Top down camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* TopDownCameraComponent;
@@ -64,5 +97,8 @@ private:
 	/** Static mesh of the character's weapon. Note: Should refactor this later, just doing this to test */
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	UStaticMeshComponent* WeaponMesh;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Viewmodel")
+	UARPGViewModelPlayerStats* PlayerStatsViewModel;
 };
 

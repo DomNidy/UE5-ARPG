@@ -134,6 +134,7 @@ void UARPGAnimNotifyStateWeaponTrace::NotifyTick(USkeletalMeshComponent* MeshCom
 	// Process each hit result
 	for (const FHitResult& HitResult : HitResults)
 	{
+		UE_LOG(LogTemp, Log, TEXT("--- Processing hits... ---"));
 		AActor* HitActor = HitResult.GetActor();
 		if (!HitActor)
 		{
@@ -164,7 +165,18 @@ void UARPGAnimNotifyStateWeaponTrace::NotifyTick(USkeletalMeshComponent* MeshCom
 			// If the hit character has an ability system component, trigger the OnWeaponTraceHitActor event
 			if (Cast<UARPGAbilitySystemComponent>(HitCharacter->GetAbilitySystemComponent()))
 			{
-				OnWeaponTraceHitActor(Character, HitCharacter);
+
+				// If we should NOT hit the same actor multiple times, and this actor hasn't been hit yet
+				if (!bHitSameActorMultipleTimes && !AlreadyHitActors.Contains(HitCharacter))
+				{
+					AlreadyHitActors.Add(HitCharacter);
+					CollisionQueryParams.AddIgnoredActor(HitCharacter);
+					OnWeaponTraceHitActor(Character, HitCharacter);
+				}
+				else if (bHitSameActorMultipleTimes)
+				{
+					OnWeaponTraceHitActor(Character, HitCharacter);
+				}
 			}
 		}
 		else
@@ -179,9 +191,10 @@ void UARPGAnimNotifyStateWeaponTrace::NotifyEnd(USkeletalMeshComponent* MeshComp
 	SCOPE_CYCLE_COUNTER(STAT_ARPGAnimNotifyStateWeaponTrace_NotifyEnd);
 	Super::NotifyEnd(MeshComp, Animation, EventReference);
 
-	// Clear references to ensure they are not used after the notify ends
+	// Clear references to ensure they are not used after the notify ends (notify states seem to retain state/be reused across multiple executions?)
 	Character = nullptr;
 	WeaponMesh = nullptr;
+	AlreadyHitActors.Empty();
 
 	UE_LOG(LogTemp, Log, TEXT("UARPGAnimNotifyStateWeaponTrace::NotifyEnd"));
 }

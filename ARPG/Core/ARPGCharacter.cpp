@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ARPGCharacter.h"
-#include "UObject/ConstructorHelpers.h"
+#include "ARPGViewModelPlayerStats.h"
 #include "ARPGNativeGameplayTags.h"
 #include "Camera/CameraComponent.h"
 #include "Components/DecalComponent.h"
@@ -18,21 +18,23 @@
 
 AARPGCharacter::AARPGCharacter()
 {
-	// Set size for player capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
-	// Don't rotate character to camera direction
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-	// Configure character movement
+	// Activate ticking in order to update the cursor every frame.
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
+
+	// --- Character Movement ---
 	GetCharacterMovement()->bOrientRotationToMovement = true; // Rotate character to moving direction
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 640.f, 0.f);
 	GetCharacterMovement()->bConstrainToPlane = true;
 	GetCharacterMovement()->bSnapToPlaneAtStart = true;
 
-	// Create a camera boom...
+	// --- Camera Boom ---
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->SetUsingAbsoluteRotation(true); // Don't want arm to rotate when character does
@@ -40,23 +42,32 @@ AARPGCharacter::AARPGCharacter()
 	CameraBoom->SetRelativeRotation(FRotator(-60.f, 0.f, 0.f));
 	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 
-	// Create a camera...
+	// --- Camera ---
 	TopDownCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
 	TopDownCameraComponent->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	TopDownCameraComponent->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	// Activate ticking in order to update the cursor every frame.
-	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.bStartWithTickEnabled = true;
-
-	// When the character pawn is possessed, the ASC will be overwritten with the ASC stored in player state
+	// --- ASC Initialization ---
 	AbilitySystemComponent = CreateDefaultSubobject<UARPGAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
-
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	SetNetUpdateFrequency(100.f);
 
-	// Setup character weapon mesh component
+	// --- Healthbar Widget ---
+	HealthbarWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthbarWidgetComponent"));
+	HealthbarWidgetComponent->SetupAttachment(RootComponent);
+	HealthbarWidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 100.f));
+	HealthbarWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	HealthbarWidgetComponent->SetDrawAtDesiredSize(true);
+	HealthbarWidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	static ConstructorHelpers::FClassFinder<UUserWidget> HealthbarWidgetClassFinder(TEXT("/Script/UMG.WidgetBlueprintGeneratedClass'/Game/UI/W_PlayerCharacterFloatingHealthbar.W_PlayerCharacterFloatingHealthbar_C'"));
+	if (HealthbarWidgetClassFinder.Succeeded())
+	{
+		HealthbarWidgetComponent->SetWidgetClass(HealthbarWidgetClassFinder.Class);
+	}
+
+	// --- Weapon Mesh ---
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
 	WeaponMesh->SetSimulatePhysics(false);
 	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -105,8 +116,7 @@ void AARPGCharacter::PossessedBy(AController* NewController)
 	{
 		// Update property to use the ASC of the player state 
 		AbilitySystemComponent = Cast<UARPGAbilitySystemComponent>(PS->GetAbilitySystemComponent());
-
-		PS->GetAbilitySystemComponent()->InitAbilityActorInfo(PS, this);
+		AbilitySystemComponent->InitAbilityActorInfo(PS, this);
 	}
 }
 
@@ -118,20 +128,26 @@ void AARPGCharacter::OnRep_PlayerState()
 	AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>();
 	if (PS)
 	{
+
 		AbilitySystemComponent = Cast<UARPGAbilitySystemComponent>(PS->GetAbilitySystemComponent());
+		AbilitySystemComponent->InitAbilityActorInfo(PS, this);
+		OnAbilitySystemComponentUpdated(AbilitySystemComponent);
 
-		PS->GetAbilitySystemComponent()->InitAbilityActorInfo(PS, this);
+		// Also get the player stats viewmodel
+		if (PS->GetPlayerStatsViewModel())
+		{
+			PlayerStatsViewModel = PS->GetPlayerStatsViewModel();
+			OnPlayerStatsViewModelUpdated(PlayerStatsViewModel);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("OnRep Player stats viewmodel not found"));
+		}
 	}
-}
-
-UStaticMeshComponent* AARPGCharacter::GetWeaponMesh() const
-{
-	return WeaponMesh;
 }
 
 void AARPGCharacter::Input_AbilityInputTagPressed(FGameplayTag InputTag)
 {
-	UE_LOG(LogTemp, Log, TEXT("------ Input_AbilityInputTagPressed: %s"), *InputTag.GetTagName().ToString());
 	if (AbilitySystemComponent)
 	{
 
@@ -146,8 +162,6 @@ void AARPGCharacter::Input_AbilityInputTagPressed(FGameplayTag InputTag)
 
 void AARPGCharacter::Input_AbilityInputTagReleased(FGameplayTag InputTag)
 {
-	UE_LOG(LogTemp, Log, TEXT("------ Input_AbilityInputTagReleased: %s"), *InputTag.GetTagName().ToString());
-
 	if (AbilitySystemComponent)
 	{
 		if (AbilitySystemComponent->HasMatchingGameplayTag(Status_Block_AbilityInput))

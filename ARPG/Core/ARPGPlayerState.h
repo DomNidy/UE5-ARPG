@@ -15,7 +15,7 @@
 const FString PlayerStatsViewModelContextName = TEXT("PlayerStatsViewModel");
 
 /**
- * 
+ *
  */
 UCLASS()
 class ARPG_API AARPGPlayerState : public APlayerState, public IAbilitySystemInterface
@@ -44,6 +44,7 @@ public:
 
 	/** Function that handles changes to core attributes and updates UI */
 	virtual void HandleCoreAttributeValueChanged(const FOnAttributeChangeData& Data);
+
 protected:
 	/** The ASC for a player lives on player state AND the player character */
 	UPROPERTY(VisibleAnywhere, Category = "Abilities")
@@ -53,9 +54,14 @@ protected:
 	UPROPERTY()
 	TObjectPtr<const UARPGHealthAttributeSet> HealthAttributeSet;
 
+	/** Player stats viewmodel */
+	UPROPERTY()
+	UARPGViewModelPlayerStats* PlayerStatsViewModel;
+
 	/** Create view models that the player will need for UI and add them to the global view model collection */
 	void InitPlayerViewModels();
 
 	/** Grants ability sets to the player and performs other necessary initialization */
 	void InitAbilitySystem();
+
 };

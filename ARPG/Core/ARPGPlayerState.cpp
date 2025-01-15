@@ -3,6 +3,7 @@
 
 #include "ARPGPlayerState.h"
 #include <MVVMGameSubsystem.h>
+#include "ARPGCharacter.h"
 
 AARPGPlayerState::AARPGPlayerState()
 {
@@ -77,7 +78,6 @@ void AARPGPlayerState::InitAbilitySystem()
 // This function is only bound on the client side. See InitAbilitySystem
 void AARPGPlayerState::HandleCoreAttributeValueChanged(const FOnAttributeChangeData& Data)
 {
-	UARPGViewModelPlayerStats* PlayerStatsViewModel = GetPlayerStatsViewModel();
 	if (!PlayerStatsViewModel)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Cannot handle attribute change event with no player stats view model"));
@@ -110,60 +110,65 @@ void AARPGPlayerState::InitPlayerViewModels()
 	}
 
 	// Create the view model for the player
-	UARPGViewModelPlayerStats* PlayerStatsViewModel = NewObject<UARPGViewModelPlayerStats>(this, TEXT("PlayerStatsViewModel"));
-	if (!PlayerStatsViewModel)
+	UARPGViewModelPlayerStats* NewPlayerStatsViewModel = NewObject<UARPGViewModelPlayerStats>(this, TEXT("PlayerStatsViewModel"));
+	if (!NewPlayerStatsViewModel)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to create PlayerStatsViewModel for PlayerState."));
 		return;
 	}
 
-	// Retrieve the MVVM subsystem
-	UMVVMGameSubsystem* ViewModelSubsystem = GetGameInstance()->GetSubsystem<UMVVMGameSubsystem>();
-	if (!ensure(ViewModelSubsystem))
-	{
-		UE_LOG(LogTemp, Error, TEXT("MVVMGameSubsystem is missing in the GameInstance."));
-		return;
-	}
+	PlayerStatsViewModel = NewPlayerStatsViewModel;
 
-	UMVVMViewModelCollectionObject* GlobalViewModelCollection = ViewModelSubsystem->GetViewModelCollection();
-	if (!ensure(GlobalViewModelCollection))
-	{
-		UE_LOG(LogTemp, Error, TEXT("GlobalViewModelCollection is missing in MVVMGameSubsystem."));
-		return;
-	}
+	//// Retrieve the MVVM subsystem
+	//UMVVMGameSubsystem* ViewModelSubsystem = GetGameInstance()->GetSubsystem<UMVVMGameSubsystem>();
+	//if (!ensure(ViewModelSubsystem))
+	//{
+	//	UE_LOG(LogTemp, Error, TEXT("MVVMGameSubsystem is missing in the GameInstance."));
+	//	return;
+	//}
 
-	// Set up the view model context
-	FMVVMViewModelContext ViewModelContext;
-	ViewModelContext.ContextClass = UARPGViewModelPlayerStats::StaticClass();
-	ViewModelContext.ContextName = FName(PlayerStatsViewModelContextName);
+	//UMVVMViewModelCollectionObject* GlobalViewModelCollection = ViewModelSubsystem->GetViewModelCollection();
+	//if (!ensure(GlobalViewModelCollection))
+	//{
+	//	UE_LOG(LogTemp, Error, TEXT("GlobalViewModelCollection is missing in MVVMGameSubsystem."));
+	//	return;
+	//}
 
-	// Add the view model to the collection
-	if (!GlobalViewModelCollection->AddViewModelInstance(ViewModelContext, PlayerStatsViewModel))
-	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to add PlayerStatsViewModel to the GlobalViewModelCollection."));
-	}
+	//// Set up the view model context
+	//FMVVMViewModelContext ViewModelContext;
+	//ViewModelContext.ContextClass = UARPGViewModelPlayerStats::StaticClass();
+	//ViewModelContext.ContextName = FName(PlayerStatsViewModelContextName);
+
+
+	//// Add the view model to the collection
+	//if (!GlobalViewModelCollection->AddViewModelInstance(ViewModelContext, NewPlayerStatsViewModel))
+	//{
+	//	UE_LOG(LogTemp, Error, TEXT("Failed to add PlayerStatsViewModel to the GlobalViewModelCollection."));
+	//	return;
+	//}
 }
 
 UARPGViewModelPlayerStats* AARPGPlayerState::GetPlayerStatsViewModel() const
 {
+	return PlayerStatsViewModel;
 
-	UMVVMGameSubsystem* ViewModelSubsystem = GetGameInstance()->GetSubsystem<UMVVMGameSubsystem>();
-	check(ViewModelSubsystem);
+	//UMVVMGameSubsystem* ViewModelSubsystem = GetGameInstance()->GetSubsystem<UMVVMGameSubsystem>();
+	//check(ViewModelSubsystem);
 
-	UMVVMViewModelCollectionObject* GlobalViewModelCollection = ViewModelSubsystem->GetViewModelCollection();
-	check(GlobalViewModelCollection);
+	//UMVVMViewModelCollectionObject* GlobalViewModelCollection = ViewModelSubsystem->GetViewModelCollection();
+	//check(GlobalViewModelCollection);
 
-	// Get the local player's viewmodel
-	FMVVMViewModelContext ViewModelContext;
-	ViewModelContext.ContextName = FName(PlayerStatsViewModelContextName);
-	ViewModelContext.ContextClass = UARPGViewModelPlayerStats::StaticClass();
+	//// Get the local player's viewmodel
+	//FMVVMViewModelContext ViewModelContext;
+	//ViewModelContext.ContextName = FName(PlayerStatsViewModelContextName);
+	//ViewModelContext.ContextClass = UARPGViewModelPlayerStats::StaticClass();
 
-	UARPGViewModelPlayerStats* LocalPlayerStatsViewModel = Cast<UARPGViewModelPlayerStats>(GlobalViewModelCollection->FindViewModelInstance(ViewModelContext));
-	if (!LocalPlayerStatsViewModel)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Could not find local player stats viewmodel"));
-		return nullptr;
-	}
+	//UARPGViewModelPlayerStats* LocalPlayerStatsViewModel = Cast<UARPGViewModelPlayerStats>(GlobalViewModelCollection->FindViewModelInstance(ViewModelContext));
+	//if (!LocalPlayerStatsViewModel)
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("Could not find local player stats viewmodel"));
+	//	return nullptr;
+	//}
 
-	return LocalPlayerStatsViewModel;
+	//return LocalPlayerStatsViewModel;
 }

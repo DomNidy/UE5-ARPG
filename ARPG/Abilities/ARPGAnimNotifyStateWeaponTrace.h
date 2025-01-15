@@ -62,6 +62,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Trace")
 	bool bIgnoreSelf = true;
 
+
+	/**
+	 * @brief If true, then a single swing can trigger multiple hits on the same actor in a single swing
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee")
+	bool bHitSameActorMultipleTimes = false;
+	
+
 protected:
 
 	/**
@@ -98,4 +106,8 @@ private:
 	 * @brief The shape of the trace that will be performed
 	 */
 	FCollisionShape WeaponTraceShape;
+
+
+	// Set used to store actors that have already been hit by the trace
+	TSet<AActor*> AlreadyHitActors;
 };
