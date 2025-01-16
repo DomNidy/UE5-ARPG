@@ -80,6 +80,11 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon Trace")
 	void OnWeaponTraceHitActor(AActor* InstigatorActor, AActor* HitActor) const;
 
+	/**
+	 * @brief Draws a box around a character for debugging purposes.
+	 */
+	UFUNCTION()
+	void DebugDrawBoxAroundCharacter(ACharacter* TargetCharacter, FColor Color, float Duration);
 private:
 	/**
 	 * @brief The character executing the animation montage

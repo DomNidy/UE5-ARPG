@@ -74,6 +74,21 @@ void UARPGAnimNotifyStateWeaponTrace::NotifyBegin(
 		CollisionObjectQueryParams.AddObjectTypesToQuery(ECollisionChannel::ECC_Pawn);
 	}
 
+
+	if (!WeaponMesh) return;
+
+	FVector StartLocation = WeaponMesh->GetSocketLocation(WeaponTraceStartSocket);
+	UE_LOGFMT(LogTemp, Log, "START LOC: {0}", StartLocation.ToString());
+	// Draw box at the starting point of trace
+	DrawDebugBox(
+		Character->GetWorld(),
+		StartLocation,
+		FVector(20.f, 20.f, 20.f),
+		WeaponMesh->GetSocketQuaternion(WeaponTraceEndSocket),
+		FColor::Cyan,
+		false,
+		5.0f
+	);
 }
 
 // Repeatedly check for overlaps with enemy characters with a box trace around the character's sword
@@ -104,7 +119,11 @@ void UARPGAnimNotifyStateWeaponTrace::NotifyTick(USkeletalMeshComponent* MeshCom
 	// Define the start and end locations of the trace
 	FVector StartLocation = WeaponMesh->GetSocketLocation(WeaponTraceStartSocket);
 	FVector EndLocation = WeaponMesh->GetSocketLocation(WeaponTraceEndSocket);
-	FQuat TraceRotation = WeaponMesh->GetComponentQuat();
+	FVector MidVec = EndLocation - StartLocation;
+	// get up vector of world
+	FQuat TraceRotation = WeaponMesh->GetSocketQuaternion(WeaponTraceEndSocket);
+
+	UE_LOGFMT(LogTemp, Log, "Start location: {0}, end location: {1}, trace rotation: {2}, end-start: {3}", StartLocation.ToString(), EndLocation.ToString(), TraceRotation.ToString(), MidVec.ToString());
 
 	// Perform the sweep trace
 	TArray<FHitResult> HitResults;
@@ -117,24 +136,44 @@ void UARPGAnimNotifyStateWeaponTrace::NotifyTick(USkeletalMeshComponent* MeshCom
 		WeaponTraceShape,
 		CollisionQueryParams
 	);
+	// Draw path of the trace
+	DrawDebugLine(
+		World,               // The world context
+		StartLocation,       // Starting point of the trace
+		EndLocation,         // Ending point of the trace
+		FColor::Red,         // Line color (Red, for example)
+		false,               // Persistent (false for temporary, true for persistent)
+		2.0f,                // Duration (2 seconds for temporary debug line)
+		0,                   // Depth priority (0 for default)
+		1.0f                 // Line thickness
+	);
 
-	// Draw the trace for debugging purposes
+
+	// Draw box at the starting point of trace
 	DrawDebugBox(
 		World,
 		StartLocation,
-		WeaponTraceBoxHalfExtent,
+		FVector(1.f, 1.f, 1.f),
 		TraceRotation,
-		FColor::Red,
+		FColor::Yellow,
 		false,
-		0.3f,
-		0,
-		1.0f
+		2.0f
+	);
+
+	DrawDebugBox(
+		World,
+		EndLocation,
+		FVector(1.f, 1.f, 1.f),
+		TraceRotation,
+		FColor::Yellow,
+		false,
+		2.0f
 	);
 
 	// Process each hit result
 	for (const FHitResult& HitResult : HitResults)
 	{
-		UE_LOG(LogTemp, Log, TEXT("--- Processing hits... ---"));
+
 		AActor* HitActor = HitResult.GetActor();
 		if (!HitActor)
 		{
@@ -144,29 +183,14 @@ void UARPGAnimNotifyStateWeaponTrace::NotifyTick(USkeletalMeshComponent* MeshCom
 		// Check if the hit actor is another character
 		if (AARPGCharacter* HitCharacter = Cast<AARPGCharacter>(HitActor))
 		{
-			UE_LOG(LogTemp, Log, TEXT("Hit character: %s"), *HitCharacter->GetName());
 
-			// Draw a debug box around the hit character
-			DrawDebugBox(
-				World,
-				HitCharacter->GetActorLocation(),
-				FVector(
-					HitCharacter->GetCapsuleComponent()->GetScaledCapsuleRadius(),
-					HitCharacter->GetCapsuleComponent()->GetScaledCapsuleRadius(),
-					HitCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
-				),
-				FColor::Green,
-				false,
-				0.5f,
-				0,
-				1.0f
-			);
+			DebugDrawBoxAroundCharacter(HitCharacter, FColor::Green, 0.3f);
 
 			// If the hit character has an ability system component, trigger the OnWeaponTraceHitActor event
 			if (Cast<UARPGAbilitySystemComponent>(HitCharacter->GetAbilitySystemComponent()))
 			{
 
-				// If we should NOT hit the same actor multiple times, and this actor hasn't been hit yet
+				// If we should NOT hit the same actor multiple times and this actor hasn't been hit yet
 				if (!bHitSameActorMultipleTimes && !AlreadyHitActors.Contains(HitCharacter))
 				{
 					AlreadyHitActors.Add(HitCharacter);
@@ -177,13 +201,37 @@ void UARPGAnimNotifyStateWeaponTrace::NotifyTick(USkeletalMeshComponent* MeshCom
 				{
 					OnWeaponTraceHitActor(Character, HitCharacter);
 				}
+
 			}
 		}
-		else
-		{
-			UE_LOG(LogTemp, Log, TEXT("Hit non-character actor: %s"), *HitActor->GetName());
-		}
 	}
+}
+
+void UARPGAnimNotifyStateWeaponTrace::DebugDrawBoxAroundCharacter(ACharacter* TargetCharacter, FColor Color, float Duration)
+{
+	if (!TargetCharacter)
+	{
+		return;
+	}
+	UWorld* World = TargetCharacter->GetWorld();
+	if (!World)
+	{
+		return;
+	}
+	DrawDebugBox(
+		World,
+		TargetCharacter->GetActorLocation(),
+		FVector(
+			TargetCharacter->GetCapsuleComponent()->GetScaledCapsuleRadius(),
+			TargetCharacter->GetCapsuleComponent()->GetScaledCapsuleRadius(),
+			TargetCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
+		),
+		Color,
+		false,
+		Duration,
+		0,
+		1.0f
+	);
 }
 
 void UARPGAnimNotifyStateWeaponTrace::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
@@ -191,10 +239,24 @@ void UARPGAnimNotifyStateWeaponTrace::NotifyEnd(USkeletalMeshComponent* MeshComp
 	SCOPE_CYCLE_COUNTER(STAT_ARPGAnimNotifyStateWeaponTrace_NotifyEnd);
 	Super::NotifyEnd(MeshComp, Animation, EventReference);
 
+	if (WeaponMesh)
+	{
+		FVector StartLocation = WeaponMesh->GetSocketLocation(WeaponTraceStartSocket);
+		UE_LOGFMT(LogTemp, Log, "END LOC: {0}", StartLocation.ToString());
+
+		DrawDebugBox(
+			Character->GetWorld(),
+			StartLocation,
+			FVector(20.f, 20.f, 20.f),
+			WeaponMesh->GetSocketQuaternion(WeaponTraceEndSocket),
+			FColor::Purple,
+			1,
+			5.0f
+		);
+	}
+
 	// Clear references to ensure they are not used after the notify ends (notify states seem to retain state/be reused across multiple executions?)
 	Character = nullptr;
 	WeaponMesh = nullptr;
 	AlreadyHitActors.Empty();
-
-	UE_LOG(LogTemp, Log, TEXT("UARPGAnimNotifyStateWeaponTrace::NotifyEnd"));
 }
