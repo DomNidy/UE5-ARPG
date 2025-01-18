@@ -66,12 +66,6 @@ AARPGCharacter::AARPGCharacter()
 	{
 		HealthbarWidgetComponent->SetWidgetClass(HealthbarWidgetClassFinder.Class);
 	}
-
-	// --- Weapon Mesh ---
-	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
-	WeaponMesh->SetSimulatePhysics(false);
-	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	WeaponMesh->SetupAttachment(RootComponent);
 }
 
 void AARPGCharacter::Tick(float DeltaSeconds)
@@ -82,11 +76,6 @@ void AARPGCharacter::Tick(float DeltaSeconds)
 void AARPGCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	if (WeaponMesh && GetMesh())
-	{
-		FAttachmentTransformRules WeaponMeshAttachmentRules(EAttachmentRule::SnapToTarget, false);
-		WeaponMesh->AttachToComponent(GetMesh(), WeaponMeshAttachmentRules, FName("weapon_r"));
-	}
 }
 
 UAbilitySystemComponent* AARPGCharacter::GetAbilitySystemComponent() const

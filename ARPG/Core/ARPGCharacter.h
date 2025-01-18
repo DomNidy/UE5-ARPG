@@ -47,13 +47,19 @@ public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
-	/** Returns WeaponMesh subobject **/
-	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	UStaticMeshComponent* GetWeaponMesh() const { return WeaponMesh; }
 
 	/** Returns the player stats viewmodel for this character */
 	UFUNCTION(BlueprintCallable, Category = "Viewmodel")
 	UARPGViewModelPlayerStats* GetPlayerStatsViewModel() const { return PlayerStatsViewModel; }
+
+
+	/**
+	 * @brief Returns the mesh for the currently equipped weapon if one exists
+	 * TODO: Get the mesh from the equipment system
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	UStaticMeshComponent* GetWeaponMesh() const { return nullptr; }
+
 
 protected:
 
@@ -79,7 +85,7 @@ protected:
 	void OnPlayerStatsViewModelUpdated(UARPGViewModelPlayerStats* NewPlayerStatsViewModel);
 
 	/**
-	 * @brief Allows blueprint to know when the ability system component has been updated
+	 * @brief Allows blueprint to know when the ability system component has been updated/changed
 	 */
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnAbilitySystemComponentUpdated(UARPGAbilitySystemComponent* NewAbilitySystemComponent);
@@ -93,10 +99,6 @@ private:
 	/** Camera boom positioning the camera above the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
-
-	/** Static mesh of the character's weapon. Note: Should refactor this later, just doing this to test */
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-	UStaticMeshComponent* WeaponMesh;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Viewmodel")
 	UARPGViewModelPlayerStats* PlayerStatsViewModel;

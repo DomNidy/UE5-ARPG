@@ -6,45 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
 #include "UObject/Interface.h"
-#include "ARPGEquipSlot.generated.h"
-
-USTRUCT(BlueprintType)
-struct FARPGEquipError
-{
-	GENERATED_BODY()
-
-	/**
-	 * @brief Text to display to user letting them know why their gear failed to equip
-	 */
-	UPROPERTY()
-	FText ErrorText;
-};
-
-UINTERFACE(MinimalAPI, Blueprintable)
-class UARPGEquipableGear : public UInterface
-{
-	GENERATED_BODY()
-};
-
-/**
- * Interface for equipable gear. Should be implemented by any class that can be equiped.
- */
-class ARPG_API IARPGEquipableGear
-{
-	GENERATED_BODY()
-
-public:
-	/**
-	 * Function called when this piece of gear is equipped to a slot
-	 * @param Slot The equip slot gear was equipped to
-	 */
-	virtual void OnEquippedToSlot(UARPGEquipSlot* Slot) = 0;
-
-	/**
-	 * @brief Function that returns equipment tags of the equipment
-	 */
-	virtual FGameplayTagContainer GetEquipmentTags() const = 0;
-};
+#include "EquipSlot.generated.h"
 
 /**
  * @brief An actor component that handles the logic of equipping gear.
@@ -55,20 +17,13 @@ public:
  *   - defining gear to slot compatibility types (e.g., a 1 handed slot can equip a sword and dagger).
  */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class ARPG_API UARPGEquipSlot : public UActorComponent
+class ARPG_API UEquipSlot : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this component's properties
-	UARPGEquipSlot();
-
-protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
-
-public:
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	UEquipSlot();
 
 	/**
 	 * @brief Try to equip a piece of equipment to this slot
@@ -76,8 +31,8 @@ public:
 	 * @param OutEquipError Reference to equip error struct. Errors are written here.
 	 * @return True if was equipped successfully, false if not.
 	 */
-	UFUNCTION(BlueprintCallable)
-	virtual bool TryEquip(TScriptInterface<IARPGEquipableGear> Equipment, FARPGEquipError& OutEquipError);
+	//UFUNCTION(BlueprintCallable)
+	//virtual bool TryEquip(UItemInstance* Equipment);
 
 	/**
 	 * @brief Returns true if the provided container of equipment tags is compatible with this slot's supported equipment tags
@@ -87,14 +42,15 @@ public:
 private:
 	/**
 	 * @brief This slot will only accept equipment that matches at least one of the
-	 *	equipment tags in this container
+	 *	equipment tags in this container. Currently using this over enum to allow for certain slots to be more
+	 *  flexible in the types of gear they accept (or don't accept).
 	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Equipment", Meta = (GameplayTagFilter = "Equipment"))
 	FGameplayTagContainer SupportedEquipmentTags;
 
 	/**
 	 * @brief The name of the socket on the player character that this slot will attach gear to (by default)
-	 *	TODO: Allow equipable items to override the socket locations.
+	 *	TODO: Allow Equippable items to override the socket locations.
 	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Equipment")
 	FName GearSocketName;

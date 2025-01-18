@@ -74,9 +74,6 @@ void UARPGAnimNotifyStateWeaponTrace::NotifyBegin(
 		CollisionObjectQueryParams.AddObjectTypesToQuery(ECollisionChannel::ECC_Pawn);
 	}
 
-
-	if (!WeaponMesh) return;
-
 	FVector StartLocation = WeaponMesh->GetSocketLocation(WeaponTraceStartSocket);
 	UE_LOGFMT(LogTemp, Log, "START LOC: {0}", StartLocation.ToString());
 	// Draw box at the starting point of trace
