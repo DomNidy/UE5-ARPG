@@ -10,10 +10,19 @@
 #include "ItemData.generated.h"
 
 /**
- * Default static data about items
+ * Default data about items, this defines how an item is used in gameplay code. Can
+ * be modified with additional properties at runtime.
+ *
+ * Needs to support:
+ *
+ * - Item properties, which may be dynamically added at runtime.
+ *
+ * - "Item signatures" that act as type descriptors for items. Signatures account for all static item properties
+ *	 and dynamic properties that may be added to them at runtime. Only items with identical item signatures can be
+ *	 combined into a stack.
  */
 UCLASS(Blueprintable)
-class ARPG_API UARPGItemData : public UDataAsset
+class ARPG_API UItemData : public UDataAsset
 {
 	GENERATED_BODY()
 
@@ -34,30 +43,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic")
 	FText ItemDescription;
 
-	// Maximum amount of this item that can be present in a stack
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic", meta = (ClampMin = 1))
-	int32 MaxStackSize = 99;
-
 	// Icon displayed in UI inventory windows
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
 	UTexture2D* Icon;
 };
 
 
-
 /**
- * Default static data about items.
+ * Base item data asset for equipment-type items.
  *
- * This data is used to set the default state for proper equipment UObjects.
- *
- * This data is effectively the "base state" of a piece of equipment, and is used to store default state of equipment.
- * The reason why we take this approach over having the CDO act as the default state is because we want to define many
- * different default states for different types of equipment. For example, maybe we want all swords to grant a "Sword Melee" ability,
- * and we want all hammers to grant a "Hammer Smash" ability. To do this with CDOs, we would need to create sword and hammer subclasses,
- * which can lead to a complex inheritance hierarchy.
  */
 UCLASS(Blueprintable)
-class ARPG_API UARPGEquipmentData : public UARPGItemData
+class ARPG_API UEquipmentData : public UItemData
 {
 	GENERATED_BODY()
 

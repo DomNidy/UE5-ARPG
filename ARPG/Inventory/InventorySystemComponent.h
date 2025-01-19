@@ -7,6 +7,11 @@
 #include "InventorySystemComponent.generated.h"
 
 
+/**
+ * Manages ownership of Inventories for an Actor. Can be player, or non player.
+ * 
+ * The InventorySystemComponent can be "granted" multiple inventories. Inventories can also be revoked.
+ */
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ARPG_API UInventorySystemComponent : public UActorComponent
 {

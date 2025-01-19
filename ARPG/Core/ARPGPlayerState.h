@@ -9,6 +9,7 @@
 #include "ARPG/Abilities/ARPGHealthAttributeSet.h"
 #include "ARPG/Abilities/ARPGAbilitySet.h"
 #include "ARPG/Core/ARPGViewModelPlayerStats.h"
+#include "ARPG/Inventory/InventorySystemComponent.h"
 #include "ARPGPlayerState.generated.h"
 
 
@@ -46,6 +47,11 @@ public:
 	virtual void HandleCoreAttributeValueChanged(const FOnAttributeChangeData& Data);
 
 protected:
+	/** This player's inventory system component */
+	UPROPERTY(VisibleAnywhere, Category = "Inventory")
+	UInventorySystemComponent* InventorySystemComponent;
+
+
 	/** The ASC for a player lives on player state AND the player character */
 	UPROPERTY(VisibleAnywhere, Category = "Abilities")
 	TObjectPtr<UARPGAbilitySystemComponent> AbilitySystemComponent;

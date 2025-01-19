@@ -7,11 +7,17 @@
 
 AARPGPlayerState::AARPGPlayerState()
 {
+	SetNetUpdateFrequency(100.f);
+
+	// ISC
+	InventorySystemComponent = CreateDefaultSubobject<UInventorySystemComponent>(TEXT("InventorySystemComponent"));
+	InventorySystemComponent->SetIsReplicated(true);
+
+	// ASC 
 	AbilitySystemComponent = CreateDefaultSubobject<UARPGAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
-	SetNetUpdateFrequency(100.f);
 
 	HealthAttributeSet = CreateDefaultSubobject<UARPGHealthAttributeSet>(TEXT("HealthAttributeSet"));
 }
