@@ -117,7 +117,6 @@ void AARPGCharacter::OnRep_PlayerState()
 	AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>();
 	if (PS)
 	{
-
 		// Initialize ASC locally
 		AbilitySystemComponent = Cast<UARPGAbilitySystemComponent>(PS->GetAbilitySystemComponent());
 		AbilitySystemComponent->InitAbilityActorInfo(PS, this);

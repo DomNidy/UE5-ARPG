@@ -9,6 +9,9 @@
 
 class UInventorySystemComponent;
 
+/**
+ * A struct that can hold an ItemInstance
+ */
 USTRUCT(BlueprintType)
 struct FInventorySlot
 {
@@ -66,10 +69,10 @@ struct FInventorySlot
  * Validates (allows or blocks) actions performed on Inventories, such as:
  *
  *	 - Moving items to different Inventories
- *
- *   - Receiving items from other Inventories.
- *
+
  *   - Moving items around to different slots.
+ *
+ *	 - Receiving items from other Inventories.
  *
  * All operations are validated on the authority (server).
  */
@@ -86,6 +89,9 @@ public:
 	UInventorySystemComponent* GetOwningInventorySystemComponent() const;
 	UInventorySystemComponent* GetOwningInventorySystemComponentChecked() const;
 
+	// ----------------------------------------------------------------------------------------------------------------
+	//	Slots
+	// ----------------------------------------------------------------------------------------------------------------
 	/**
 	 * @brief Causes runtime error if an invalid index is passed
 	 * @return Reference to the FInventorySlot at the specified index.

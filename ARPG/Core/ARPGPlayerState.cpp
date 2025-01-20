@@ -129,57 +129,9 @@ void AARPGPlayerState::InitPlayerViewModels()
 	}
 
 	PlayerStatsViewModel = NewPlayerStatsViewModel;
-
-	//// Retrieve the MVVM subsystem
-	//UMVVMGameSubsystem* ViewModelSubsystem = GetGameInstance()->GetSubsystem<UMVVMGameSubsystem>();
-	//if (!ensure(ViewModelSubsystem))
-	//{
-	//	UE_LOG(LogTemp, Error, TEXT("MVVMGameSubsystem is missing in the GameInstance."));
-	//	return;
-	//}
-
-	//UMVVMViewModelCollectionObject* GlobalViewModelCollection = ViewModelSubsystem->GetViewModelCollection();
-	//if (!ensure(GlobalViewModelCollection))
-	//{
-	//	UE_LOG(LogTemp, Error, TEXT("GlobalViewModelCollection is missing in MVVMGameSubsystem."));
-	//	return;
-	//}
-
-	//// Set up the view model context
-	//FMVVMViewModelContext ViewModelContext;
-	//ViewModelContext.ContextClass = UARPGViewModelPlayerStats::StaticClass();
-	//ViewModelContext.ContextName = FName(PlayerStatsViewModelContextName);
-
-
-	//// Add the view model to the collection
-	//if (!GlobalViewModelCollection->AddViewModelInstance(ViewModelContext, NewPlayerStatsViewModel))
-	//{
-	//	UE_LOG(LogTemp, Error, TEXT("Failed to add PlayerStatsViewModel to the GlobalViewModelCollection."));
-	//	return;
-	//}
 }
 
 UARPGViewModelPlayerStats* AARPGPlayerState::GetPlayerStatsViewModel() const
 {
 	return PlayerStatsViewModel;
-
-	//UMVVMGameSubsystem* ViewModelSubsystem = GetGameInstance()->GetSubsystem<UMVVMGameSubsystem>();
-	//check(ViewModelSubsystem);
-
-	//UMVVMViewModelCollectionObject* GlobalViewModelCollection = ViewModelSubsystem->GetViewModelCollection();
-	//check(GlobalViewModelCollection);
-
-	//// Get the local player's viewmodel
-	//FMVVMViewModelContext ViewModelContext;
-	//ViewModelContext.ContextName = FName(PlayerStatsViewModelContextName);
-	//ViewModelContext.ContextClass = UARPGViewModelPlayerStats::StaticClass();
-
-	//UARPGViewModelPlayerStats* LocalPlayerStatsViewModel = Cast<UARPGViewModelPlayerStats>(GlobalViewModelCollection->FindViewModelInstance(ViewModelContext));
-	//if (!LocalPlayerStatsViewModel)
-	//{
-	//	UE_LOG(LogTemp, Warning, TEXT("Could not find local player stats viewmodel"));
-	//	return nullptr;
-	//}
-
-	//return LocalPlayerStatsViewModel;
 }

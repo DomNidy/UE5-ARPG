@@ -1,7 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "InventorySystemComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "Logging/StructuredLog.h"
+
+void UInventorySystemComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	// TODO: Handle replication of inventories
+	/*FDoRepLifetimeParams Params;
+	Params.Condition = ELifetimeCondition::COND_OwnerOnly;*/
+
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
 
 // Sets default values for this component's properties
 UInventorySystemComponent::UInventorySystemComponent()
@@ -14,13 +24,14 @@ void UInventorySystemComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UInventory* Inventory = NewObject<UInventory>(this);
+	// Example of how to give an inventory
+	/*UInventory* Inventory = NewObject<UInventory>(this);
 	GiveInventory(Inventory, FName("DefaultInventory"));
-	DebugDumpInventories();
+	DebugDumpInventories();*/
 }
 
 
-void UInventorySystemComponent::GiveInventory(UInventory* Inventory, FName Name)
+void UInventorySystemComponent::GiveInventory(UInventory* Inventory, const FInventoryPermissionSet& PermissionSet, FName Name)
 {
 	check(Inventory != nullptr);
 	check(Name.IsValid());
