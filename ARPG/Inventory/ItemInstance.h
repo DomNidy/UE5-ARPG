@@ -9,6 +9,7 @@
 
 class UInventory;
 struct FInventorySlot;
+
 /**
  * Represents a specific instance of an item in the game world, owned by an inventory.
  * This is the runtime representation of an item.
@@ -29,7 +30,7 @@ struct FInventorySlot;
  *
  *      - Changes to the MaxQuantity at runtime and handle cases where the max quantity shrinks below the current item quantity.
  */
-UCLASS()
+UCLASS(Blueprintable, BlueprintType)
 class ARPG_API UItemInstance : public UObject
 {
 	GENERATED_BODY()
@@ -47,11 +48,6 @@ protected:
 	 * @brief Returns the owning UInventory.
 	 */
 	UInventory* GetOwningInventory() const;
-
-	/**
-	 * @brief Returns the FInventorySlot that this item is currently inside of.
-	 */
-	FInventorySlot* GetContainingSlot() const;
 
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Quantity

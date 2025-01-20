@@ -21,6 +21,13 @@ UInventorySystemComponent* UInventory::GetOwningInventorySystemComponentChecked(
 	return nullptr;
 }
 
+FInventorySlot& UInventory::GetSlot(int Index)
+{
+	check(Slots.IsValidIndex(Index));
+
+	return Slots[Index];
+}
+
 void UInventory::PreItemReceived(const UItemInstance* Item, const UInventory* SourceInventory) const
 {
 }

@@ -46,6 +46,11 @@ UAbilitySystemComponent* AARPGPlayerState::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+UInventorySystemComponent* AARPGPlayerState::GetInventorySystemComponent() const
+{
+	return InventorySystemComponent;
+}
+
 void AARPGPlayerState::InitAbilitySystem()
 {
 	if (!AbilitySystemComponent)

@@ -6,24 +6,65 @@
 // Sets default values for this component's properties
 UInventorySystemComponent::UInventorySystemComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
 
-// Called when the game starts
 void UInventorySystemComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UE_LOGFMT(LogInventorySystem, Log, "Inventory Began Play");
+	UInventory* Inventory = NewObject<UInventory>(this);
+	GiveInventory(Inventory, FName("DefaultInventory"));
+	DebugDumpInventories();
 }
 
 
-// Called every frame
-void UInventorySystemComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UInventorySystemComponent::GiveInventory(UInventory* Inventory, FName Name)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	check(Inventory != nullptr);
+	check(Name.IsValid());
+
+	if (GetOwnerRole() != ENetRole::ROLE_Authority)
+	{
+		INVENTORY_LOG(Error, TEXT("GiveInventory called on client! Cannot grant UInventory %s with inventory name: %s"), *Inventory->GetName(), *Name.ToString());
+		return;
+	}
+
+	INVENTORY_LOG(Log, TEXT("GiveInventory called on server! Granting UInventory %s with inventory name: %s"), *Inventory->GetName(), *Name.ToString());
+
+	if (Inventories.Contains(Name))
+	{
+		INVENTORY_LOG(Error, TEXT("GiveInventory failed to grant an inventory. UInventory with name %s already exists.'"), *Name.ToString());
+		return;
+	}
+
+	Inventories.Add({ Name, Inventory });
 }
 
+UInventory* UInventorySystemComponent::GetInventory(FName Name)
+{
+	check(Name.IsValid());
+
+	return *Inventories.Find(Name);
+}
+
+FString UInventorySystemComponent::GetDebugString() const
+{
+	FString DebugString = FString::Printf(TEXT("Inventories: %d"), Inventories.Num());
+
+	for (const auto& Pair : Inventories)
+	{
+		DebugString += FString::Printf(TEXT("\n- %s"),
+			*Pair.Key.ToString());
+	}
+
+	return DebugString;
+}
+
+
+void UInventorySystemComponent::DebugDumpInventories() const
+{
+	INVENTORY_LOG(Log, TEXT("Dumping inventories..."));
+	INVENTORY_LOG(Log, TEXT("%s"), *GetDebugString());
+}

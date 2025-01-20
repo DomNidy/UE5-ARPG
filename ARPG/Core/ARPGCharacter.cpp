@@ -118,11 +118,23 @@ void AARPGCharacter::OnRep_PlayerState()
 	if (PS)
 	{
 
+		// Initialize ASC locally
 		AbilitySystemComponent = Cast<UARPGAbilitySystemComponent>(PS->GetAbilitySystemComponent());
 		AbilitySystemComponent->InitAbilityActorInfo(PS, this);
 		OnAbilitySystemComponentUpdated(AbilitySystemComponent);
 
-		// Also get the player stats viewmodel
+		// Initialize inventory system
+		if (PS->GetInventorySystemComponent())
+		{
+			UE_LOG(LogTemp, Log, TEXT("We found an ISC on AARPGCharacter::OnRep_PlayerState! Dumping it."));
+			PS->GetInventorySystemComponent()->DebugDumpInventories();
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("No inventory system component on rep plyer state"));
+		}
+
+		// Initialize player stats viewmodel
 		if (PS->GetPlayerStatsViewModel())
 		{
 			PlayerStatsViewModel = PS->GetPlayerStatsViewModel();

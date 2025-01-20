@@ -27,11 +27,6 @@ UInventory* UItemInstance::GetOwningInventory() const
 	return nullptr;
 }
 
-FInventorySlot* UItemInstance::GetContainingSlot() const
-{
-	return nullptr;
-}
-
 void UItemInstance::OnMaxQuantityChanged()
 {
 	CHECK_QUANTITY_VALID();
