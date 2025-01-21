@@ -16,7 +16,7 @@ struct FInventorySlot;
  *
  * This should point to a UItemData, which is a data object that stores the underlying data and functionality for items.
  * All we're concerned about here is managing the items in the context of the inventory system, not gameplay code.
- * 
+ *
  * When an item is modified at runtime (e.g., it gets upgraded), then and only then should we create a new UItem for it (if an identical
  * UItem does not already exist). These UItems should be added to some kind of registry.
  *
@@ -40,6 +40,31 @@ public:
 
 	virtual int32 GetQuantity() const;
 	virtual const UItemData* GetItemData() const;
+
+	// ----------------------------------------------------------------------------------------------------------------
+	//	Item creation
+	// ----------------------------------------------------------------------------------------------------------------
+	/**
+	 * @brief Create an item instance with the specified ItemData and add it to the Inventory
+	 *
+	 * This method call will be ignored if not ran on server.
+	 *
+	 * Process Flow:
+	 *	1. Creates a new item instance from the specified ItemData
+	 *  2. Temporarily stores the item in the staging inventory (a game-wide holding area)
+	 *  3. Attempts to transfer the item from staging to the target inventory
+	 *  4. If transfer fails, removes the item from staging inventory
+	 * 
+	 * The staging inventory is a special, game-wide inventory. It is used to guarantee all items always belong to 
+	 * an inventory, as the system relies on this assumption. Transfer to the target inventory may fail due to various 
+	 * reasons, such as receive item hooks rejecting the transfer.
+	 *
+	 * @param ItemData The item to create
+	 * @param Inventory The inventory the item should be added to
+	 * @return Pointer to the new item
+	 */
+	static UItemInstance* CreateItemInstance(UItemData* ItemData, UInventory* Inventory);
+
 protected:
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Item ownership: Items must be owned by an Inventory, which in turn must be owned by an InventorySystemComponent

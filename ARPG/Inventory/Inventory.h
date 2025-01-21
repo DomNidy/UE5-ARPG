@@ -21,6 +21,10 @@ struct FInventorySlot
 	TObjectPtr<UItemInstance> Item;
 };
 
+// Event dispatched when an inventory changes
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
+
+
 /**
  * An object where ItemInstances are stored. Any and all ItemInstances are owned by an inventory,
  * and any and all Inventories are owned by a single InventorySystemComponent. Other InventorySystemComponents
@@ -90,6 +94,17 @@ public:
 	UInventorySystemComponent* GetOwningInventorySystemComponentChecked() const;
 
 	// ----------------------------------------------------------------------------------------------------------------
+	//	Inventory validation
+	// ----------------------------------------------------------------------------------------------------------------
+	/**
+	 * @brief Checks that the inventory is valid, which means it does not violate any invariants (like not having an owning inventory
+	 * system component.
+	 * @return True if the inventory is valid, false if it's not
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool IsValidInventory() const;
+
+	// ----------------------------------------------------------------------------------------------------------------
 	//	Slots
 	// ----------------------------------------------------------------------------------------------------------------
 	/**
@@ -99,6 +114,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	FInventorySlot& GetSlot(int Index);
 
+	// ----------------------------------------------------------------------------------------------------------------
+	//	Delegates / Events
+	// ----------------------------------------------------------------------------------------------------------------
+	/** Parameterless delegate that fires whenever the inventory changes (e.g., item added/removed, capacity changes, etc.) */
+	UPROPERTY(BlueprintAssignable, Category = "Inventory|Events")
+	FOnInventoryChanged OnInventoryChanged;
+
 protected:
 	/**
 	 * @brief Slots of the inventory, which may or may not contain an ItemInstance.
@@ -106,6 +128,18 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Inventory")
 	TArray<FInventorySlot> Slots;
 
+
+protected:
+#pragma region ReceivingItems
+	friend class UInventorySystemComponent;
+
+
+	/** Method invoked by the InventorySystemComponent this inventory belongs to. */
+	bool TryReceiveItem(const UItemInstance* Item, const UInventory* SourceInventory);
+
+	// ----------------------------------------------------------------------------------------------------------------
+	//	Receiving item hooks
+	// ----------------------------------------------------------------------------------------------------------------
 	/**
 	 * @brief Executed before an item is added (received) to this inventory.
 	 * @param Item The item that we're receiving
@@ -116,11 +150,14 @@ protected:
 	virtual void PreItemReceived(const UItemInstance* Item, const UInventory* SourceInventory) const;
 
 	/**
-	 * @brief Executed after an item is added (received) to this inventory.
+	 * @brief Executed after an item is successfully added (received) to this inventory.
 	 * @param Item The item that we received.
 	 * @param SourceInventory The inventory this item came from
 	 *
 	 * When this code runs, we now have ownership over the Item.
 	 */
 	virtual void PostItemReceived(const UItemInstance* Item, const UInventory* SourceInventory) const;
+#pragma endregion
+private:
+	UInventorySystemComponent* OwningInventory;
 };

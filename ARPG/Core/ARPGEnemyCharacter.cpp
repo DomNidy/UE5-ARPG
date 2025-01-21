@@ -42,6 +42,7 @@ void AARPGEnemyCharacter::PossessedBy(AController* NewController)
 	check(AbilitySystemComponent);
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+
 }
 
 void AARPGEnemyCharacter::PostInitializeComponents()

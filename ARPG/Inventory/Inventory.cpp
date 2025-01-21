@@ -21,11 +21,26 @@ UInventorySystemComponent* UInventory::GetOwningInventorySystemComponentChecked(
 	return nullptr;
 }
 
+bool UInventory::IsValidInventory() const
+{
+	if (GetOwningInventorySystemComponent() == nullptr)
+	{
+		return false;
+	}
+
+	return true;
+}
+
 FInventorySlot& UInventory::GetSlot(int Index)
 {
 	check(Slots.IsValidIndex(Index));
 
 	return Slots[Index];
+}
+
+bool UInventory::TryReceiveItem(const UItemInstance* Item, const UInventory* SourceInventory)
+{
+	return false;
 }
 
 void UInventory::PreItemReceived(const UItemInstance* Item, const UInventory* SourceInventory) const
@@ -34,4 +49,6 @@ void UInventory::PreItemReceived(const UItemInstance* Item, const UInventory* So
 
 void UInventory::PostItemReceived(const UItemInstance* Item, const UInventory* SourceInventory) const
 {
+	OnInventoryChanged.Broadcast();
 }
+
