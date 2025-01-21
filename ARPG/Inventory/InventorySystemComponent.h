@@ -28,11 +28,36 @@ struct FInventoryPermissionSet
 {
 	GENERATED_BODY()
 
-	UPROPERTY()
-	bool bAllowAddItems = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	bool bAllowPutItemsIn = false; // can we move items into the inventory?
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	bool bAllowTakeItemsOut = false; // can we move items out of the inventory?
+};
+
+/**
+ * @brief When an inventory is given to an ISC, an FInventoryGrant is created that
+ * defines what permissions the ISC will have over the inventory, what name the ISC
+ * will refer to the inventory with, and a pointer to the inventory itself.
+ *
+ * This data is specific to an ISC. The InventoryName is local to the context of an ISC,
+ * different ISCs may refer to the same inventory but use different InventoryNames
+ */
+USTRUCT(BlueprintType)
+struct FInventoryGrant
+{
+	GENERATED_BODY()
+	FInventoryGrant() : InventoryName(NAME_None), Inventory(nullptr), InventoryPermissionSet() {}
+	FInventoryGrant(FName InventoryName, UInventory* Inventory, FInventoryPermissionSet InventoryPermissionSet) : InventoryName(InventoryName), Inventory(Inventory), InventoryPermissionSet(InventoryPermissionSet) {}
 
 	UPROPERTY()
-	bool bAllowTakeItems = 0;
+	FName InventoryName;
+
+	UPROPERTY()
+	UInventory* Inventory;
+
+	UPROPERTY()
+	FInventoryPermissionSet InventoryPermissionSet;
 };
 
 
@@ -57,19 +82,19 @@ public:
 	//	Inventories
 	// ----------------------------------------------------------------------------------------------------------------
 	/**
-	 * @brief Grants an inventory to an ISC. If the owner actor is not authoritative, this is ignored.
+	 * @brief Creates an inventory grant and assigns it to this ISC. If the owner actor is not authoritative, this is ignored.
 	 *	An owner actor is considered authoritative if it's net role is ENetRole::ROLE_Authority
-
+	 *
 	 * @param Name The name to assign to the granted inventory.
 	 */
 	virtual void GiveInventory(UInventory* Inventory, const FInventoryPermissionSet& PermissionSet, FName Name);
 
 	/**
-	 * @brief Return a pointer to the inventory with the specified name.
+	 * @brief Return a pointer to the inventory grant with the specified name.
 	 *
-	 * If no inventory with a matching name is found, nullptr is returned instead.
+	 * If no inventory with a matching name is found in the grants, nullptr is returned.
 	 */
-	virtual UInventory* GetInventory(FName Name);
+	virtual FInventoryGrant* GetInventoryGrant(FName Name);
 
 
 	// ----------------------------------------------------------------------------------------------------------------
@@ -89,8 +114,8 @@ protected:
 private:
 
 	/**
-	 * @brief Maps inventory names to their respective inventories.
+	 * @brief Maps inventory names to their respective inventory grants.
 	 */
-	UPROPERTY()
-	TMap<FName, UInventory*> Inventories;
+	UPROPERTY(Replicated)
+	TArray<FInventoryGrant> Inventories;
 };

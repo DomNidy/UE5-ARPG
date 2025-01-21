@@ -27,27 +27,20 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
 
 /**
  * An object where ItemInstances are stored. Any and all ItemInstances are owned by an inventory,
- * and any and all Inventories are owned by a single InventorySystemComponent. Other InventorySystemComponents
- * can be granted varying levels of access to an inventory they do not own by adding them as Participants.
+ * and any and all Inventories are owned by a single InventorySystemComponent. Multiple 
+ * InventorySystemComponents can be given access to an Inventory, and the level of access an ISC
+ * has over a particular inventory can be controlled with their FInventoryGrant.
+ * 
  *
- * Ownership & Participants:
+ * Ownership & Grants:
  *
  *     Ownership of an Inventory is held by a single InventorySystemComponent. When an InventorySystemComponent
- *	   owns an Inventory, the inventory will always be replicated to them, and they will always have authority to
- *	   perform actions like sending and receiving items to and from the Inventory. The server will still need to
+ *	   owns an Inventory, the inventory will always be replicated to them. The server will still need to
  *	   validate an owner's actions to prevent them from cheating.
  *
- *	   Participants of an Inventory are other InventorySystemComponents that should have some level of access to the
- *	   Inventory. Inventory data will be replicated to participants, and some participants may have different levels of
- *	   permissions. E.g., a shared guild chest might allow the guild leader to take items out and put them in, but other
- *	   guild members can only put items in.
- *
- *	   Important: While an owner always has the authority to perform actions on their inventories, these actions
- *	   can still fail. For example, if an ISC tries to send an item to another ISC's inventory, that ISC or
- *	   Inventory may still block the item from being sent. Additionally the current GameState or GameMode may cause
- *	   actions to be blocked, for example, if a player is deemed to be in combat they shouldn't be able to change their gear
- *     (which means moving an item to their equipment inventory), and if the current GameMode is "SharedPlayerCity" they
- *	   shouldn't be able to drop items into the world (which means moving an item into the world inventory).
+ *	   Other InventorySystemComponents can be given granular levels of access to an Inventory they are not the owner of.
+ *	   This is accomplished through the FInventoryGrant struct and permissions. Only the owner is capable of
+ *	   issuing grants to other ISCs.
  *
  * Capacity:
  *

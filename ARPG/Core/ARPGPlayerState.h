@@ -33,7 +33,6 @@ public:
 
 	virtual UInventorySystemComponent* GetInventorySystemComponent() const;
 
-
 	//~IAbilitySystemInterface
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	//~End of IAbilitySystemInterface

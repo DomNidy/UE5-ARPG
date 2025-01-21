@@ -10,6 +10,8 @@ void UInventorySystemComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	/*FDoRepLifetimeParams Params;
 	Params.Condition = ELifetimeCondition::COND_OwnerOnly;*/
 
+	DOREPLIFETIME_CONDITION(UInventorySystemComponent, Inventories, COND_OwnerOnly);
+
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
@@ -44,30 +46,41 @@ void UInventorySystemComponent::GiveInventory(UInventory* Inventory, const FInve
 
 	INVENTORY_LOG(Log, TEXT("GiveInventory called on server! Granting UInventory %s with inventory name: %s"), *Inventory->GetName(), *Name.ToString());
 
-	if (Inventories.Contains(Name))
+
+	/** Lock Inventories*/
+	for (const auto& InventoryMapping : Inventories)
 	{
-		INVENTORY_LOG(Error, TEXT("GiveInventory failed to grant an inventory. UInventory with name %s already exists.'"), *Name.ToString());
-		return;
+		if (InventoryMapping.InventoryName == Name)
+		{
+			INVENTORY_LOG(Error, TEXT("GiveInventory failed to grant an inventory. UInventory with name %s already exists.'"), *Name.ToString());
+			return;
+		}
 	}
 
-	Inventories.Add({ Name, Inventory });
+	Inventories.Add(FInventoryGrant(Name, Inventory, PermissionSet));
+	/** Unlock Inventories*/
 }
 
-UInventory* UInventorySystemComponent::GetInventory(FName Name)
+FInventoryGrant* UInventorySystemComponent::GetInventoryGrant(FName Name)
 {
 	check(Name.IsValid());
 
-	return *Inventories.Find(Name);
+	FInventoryGrant* Inventory = Inventories.FindByPredicate([&](FInventoryGrant Grant)
+		{
+			return Grant.InventoryName == Name;
+		});
+
+	return Inventory;
 }
 
 FString UInventorySystemComponent::GetDebugString() const
 {
 	FString DebugString = FString::Printf(TEXT("Inventories: %d"), Inventories.Num());
 
-	for (const auto& Pair : Inventories)
+	for (const auto& InventoryGrant : Inventories)
 	{
 		DebugString += FString::Printf(TEXT("\n- %s"),
-			*Pair.Key.ToString());
+			*InventoryGrant.InventoryName.ToString());
 	}
 
 	return DebugString;
