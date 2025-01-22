@@ -107,6 +107,7 @@ void AARPGCharacter::PossessedBy(AController* NewController)
 		AbilitySystemComponent = Cast<UARPGAbilitySystemComponent>(PS->GetAbilitySystemComponent());
 		AbilitySystemComponent->InitAbilityActorInfo(PS, this);
 	}
+
 }
 
 // Client only: Called on clients when the player state property of this pawn is updated
@@ -122,15 +123,10 @@ void AARPGCharacter::OnRep_PlayerState()
 		AbilitySystemComponent->InitAbilityActorInfo(PS, this);
 		OnAbilitySystemComponentUpdated(AbilitySystemComponent);
 
-		// Initialize inventory system
-		if (PS->GetInventorySystemComponent())
+		if (UInventorySystemComponent* ISC = PS->GetInventorySystemComponent())
 		{
-			UE_LOG(LogTemp, Log, TEXT("We found an ISC on AARPGCharacter::OnRep_PlayerState! Dumping it."));
-			PS->GetInventorySystemComponent()->DebugDumpInventories();
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("No inventory system component on rep plyer state"));
+			UE_LOG(LogTemp, Log, TEXT("[CLIENT] We found an ISC on AARPGCharacter::OnRep_PlayerState! Dumping it."));
+			ISC->DebugDumpInventories();
 		}
 
 		// Initialize player stats viewmodel

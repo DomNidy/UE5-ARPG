@@ -16,7 +16,6 @@ UARPGHealthAttributeSet::UARPGHealthAttributeSet()
 void UARPGHealthAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth)
 {
 	GetOwningAbilitySystemComponent()->SetBaseAttributeValueFromReplication(GetHealthAttribute(), GetHealth(), OldHealth.GetCurrentValue());
-	UE_LOG(LogTemp, Log, TEXT("On rep health: %f, server?: %s"), GetHealth(), GetOwningActor()->GetNetMode() == NM_DedicatedServer ? TEXT("True") : TEXT("False"));
 
 }
 
@@ -24,7 +23,6 @@ void UARPGHealthAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHeal
 void UARPGHealthAttributeSet::OnRep_HealthMax(const FGameplayAttributeData& OldHealthMax)
 {
 	GetOwningAbilitySystemComponent()->SetBaseAttributeValueFromReplication(GetHealthMaxAttribute(), GetHealthMax(), OldHealthMax.GetCurrentValue());
-	UE_LOG(LogTemp, Log, TEXT("On rep max health: %f, server?: %s"), GetHealthMax(), GetOwningActor()->GetNetMode() == NM_DedicatedServer ? TEXT("True") : TEXT("False"));
 }
 
 void UARPGHealthAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)

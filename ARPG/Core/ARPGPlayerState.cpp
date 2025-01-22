@@ -22,11 +22,6 @@ AARPGPlayerState::AARPGPlayerState()
 	HealthAttributeSet = CreateDefaultSubobject<UARPGHealthAttributeSet>(TEXT("HealthAttributeSet"));
 }
 
-void AARPGPlayerState::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
 void AARPGPlayerState::PreInitializeComponents()
 {
 	Super::PreInitializeComponents();
@@ -39,6 +34,12 @@ void AARPGPlayerState::PostInitializeComponents()
 	Super::PostInitializeComponents();
 
 	InitAbilitySystem();
+	InitInventorySystem();
+}
+
+void AARPGPlayerState::BeginPlay()
+{
+	Super::BeginPlay();
 }
 
 UAbilitySystemComponent* AARPGPlayerState::GetAbilitySystemComponent() const
@@ -98,12 +99,10 @@ void AARPGPlayerState::HandleCoreAttributeValueChanged(const FOnAttributeChangeD
 	// Update the view model with new attribute values
 	if (Data.Attribute == UARPGHealthAttributeSet::GetHealthAttribute())
 	{
-		UE_LOG(LogTemp, Log, TEXT("Core attribute changed: Health! %f"), Data.NewValue);
 		PlayerStatsViewModel->SetHealth(Data.NewValue);
 	}
 	else if (Data.Attribute == UARPGHealthAttributeSet::GetHealthMaxAttribute())
 	{
-		UE_LOG(LogTemp, Log, TEXT("Core attribute changed: HealthMax! %f"), Data.NewValue);
 		PlayerStatsViewModel->SetHealthMax(Data.NewValue);
 	}
 	else
@@ -129,6 +128,29 @@ void AARPGPlayerState::InitPlayerViewModels()
 	}
 
 	PlayerStatsViewModel = NewPlayerStatsViewModel;
+}
+
+void AARPGPlayerState::InitInventorySystem()
+{
+	if (!HasAuthority() || !InventorySystemComponent)
+	{
+		return;
+	}
+
+	// use default inventory permission set for owners
+	FInventoryPermissionSet InventoryPermissionSet;
+	InventoryPermissionSet.bAllowPutItemsIn = true;
+	InventoryPermissionSet.bAllowTakeItemsOut = true;
+
+	for (int Index = 0; Index < InventoriesToGrant.Num(); ++Index)
+	{
+		UClass* InventoryClass = InventoriesToGrant[Index];
+
+		if (InventoryClass)
+		{
+			InventorySystemComponent->CreateAndGiveInventory(InventoryClass, InventoryPermissionSet);
+		}
+	}
 }
 
 UARPGViewModelPlayerStats* AARPGPlayerState::GetPlayerStatsViewModel() const

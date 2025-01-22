@@ -24,7 +24,6 @@ struct FInventorySlot
 // Event dispatched when an inventory changes
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
 
-
 /**
  * An object where ItemInstances are stored. Any and all ItemInstances are owned by an inventory,
  * and any and all Inventories are owned by a single InventorySystemComponent. Multiple 

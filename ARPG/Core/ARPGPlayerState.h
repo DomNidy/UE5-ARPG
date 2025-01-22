@@ -37,21 +37,29 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	//~End of IAbilitySystemInterface
 
+	/** Fetch player stats viewmodel for this player */
+	UFUNCTION(BlueprintCallable)
+	UARPGViewModelPlayerStats* GetPlayerStatsViewModel() const;
+
+
+public:
+
 	/** Ability sets to grant to the player on game start */
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities")
 	TArray<TObjectPtr<UARPGAbilitySet>> AbilitySets;
 
-	/** Fetch player stats viewmodel for this player */
-	UFUNCTION(BlueprintCallable)
-	UARPGViewModelPlayerStats* GetPlayerStatsViewModel() const;
+	/** Inventory classes to instantiate and grant on game start */
+	UPROPERTY(EditDefaultsOnly, Category = "Inventories")
+	TArray<TSubclassOf<UInventory>> InventoriesToGrant;
+
+
 
 	/** Function that handles changes to core attributes and updates UI */
 	virtual void HandleCoreAttributeValueChanged(const FOnAttributeChangeData& Data);
 
 protected:
 	/** This player's inventory system component */
-	UPROPERTY(VisibleAnywhere, Category = "Inventory")
-	UInventorySystemComponent* InventorySystemComponent;
+	TObjectPtr<UInventorySystemComponent> InventorySystemComponent;
 
 
 	/** The ASC for a player lives on player state AND the player character */
@@ -68,6 +76,9 @@ protected:
 
 	/** Create view models that the player will need for UI and add them to the global view model collection */
 	void InitPlayerViewModels();
+
+	/** Create and grant initial inventories to player state */
+	void InitInventorySystem();
 
 	/** Grants ability sets to the player and performs other necessary initialization */
 	void InitAbilitySystem();

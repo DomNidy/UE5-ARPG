@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Inventory.h"
+#include "Misc/Guid.h"
 #include "InventorySystemComponent.generated.h"
 
 #define INVENTORY_LOG(Verbosity, Format, ...) \
@@ -36,25 +37,40 @@ struct FInventoryPermissionSet
 };
 
 /**
- * @brief When an inventory is given to an ISC, an FInventoryGrant is created that
- * defines what permissions the ISC will have over the inventory, what name the ISC
- * will refer to the inventory with, and a pointer to the inventory itself.
+ * @brief Represents the ability of an ISC to access a specific inventory.
  *
- * This data is specific to an ISC. The InventoryName is local to the context of an ISC,
- * different ISCs may refer to the same inventory but use different InventoryNames
+ * When an inventory is given to an ISC, an FInventoryGrant is created that
+ * defines what permissions the ISC will have over the inventory and a pointer
+ * to the inventory itself.
+ *
+ * This data is specific to an ISC.
  */
 USTRUCT(BlueprintType)
 struct FInventoryGrant
 {
 	GENERATED_BODY()
-	FInventoryGrant() : InventoryName(NAME_None), Inventory(nullptr), InventoryPermissionSet() {}
-	FInventoryGrant(FName InventoryName, UInventory* Inventory, FInventoryPermissionSet InventoryPermissionSet) : InventoryName(InventoryName), Inventory(Inventory), InventoryPermissionSet(InventoryPermissionSet) {}
+	FInventoryGrant()
+	{
+		Inventory = nullptr;
+		GrantGuid = FGuid::NewGuid();
+		InventoryPermissionSet = FInventoryPermissionSet();
+	}
+
+	FInventoryGrant(UInventory* Inventory, FInventoryPermissionSet InventoryPermissionSet)
+		: Inventory(Inventory)
+		, InventoryPermissionSet(InventoryPermissionSet)
+	{
+		GrantGuid = FGuid::NewGuid();
+	}
+
+	/**
+	 * @brief Unique identifier for an inventory grant
+	 */
+	UPROPERTY(meta = (IgnoreForMemberInitializationTest))
+	FGuid GrantGuid;
 
 	UPROPERTY()
-	FName InventoryName;
-
-	UPROPERTY()
-	UInventory* Inventory;
+	TObjectPtr<UInventory> Inventory;
 
 	UPROPERTY()
 	FInventoryPermissionSet InventoryPermissionSet;
@@ -83,18 +99,32 @@ public:
 	// ----------------------------------------------------------------------------------------------------------------
 	/**
 	 * @brief Creates an inventory grant and assigns it to this ISC. If the owner actor is not authoritative, this is ignored.
-	 *	An owner actor is considered authoritative if it's net role is ENetRole::ROLE_Authority
+	 * An owner actor is considered authoritative if it's net role (locally) is ENetRole::ROLE_Authority
 	 *
-	 * @param Name The name to assign to the granted inventory.
+	 * @param Inventory The inventory we want to give this ASC access to.
+	 * @param PermissionSet Permission level that this ISC should have over the Inventory.
 	 */
-	virtual void GiveInventory(UInventory* Inventory, const FInventoryPermissionSet& PermissionSet, FName Name);
+	virtual void GiveInventory(UInventory* Inventory, const FInventoryPermissionSet& PermissionSet);
+
 
 	/**
-	 * @brief Return a pointer to the inventory grant with the specified name.
+	 * @brief Creates a new UInventory with the specified Inventory class, and then grants the inventory.
 	 *
-	 * If no inventory with a matching name is found in the grants, nullptr is returned.
+	 * @param InventoryClass Class of the Inventory we want to create
+	 * @param PermissionSet The permissions
+	 * @param Name
+	 * @return
 	 */
-	virtual FInventoryGrant* GetInventoryGrant(FName Name);
+	virtual UInventory* CreateAndGiveInventory(TSubclassOf<UInventory> InventoryClass, const FInventoryPermissionSet& PermissionSet);
+
+	/**
+	 * @brief Return a pointer to the inventory grant with the matching grant guid
+	 *
+	 * Useful to allow the client to check what permissions its grant allows it over an inventory.
+	 *
+	 * If no inventory with a matching guid is found in the grants, nullptr is returned.
+	 */
+	virtual FInventoryGrant* GetInventoryGrant(FGuid Guid);
 
 
 	// ----------------------------------------------------------------------------------------------------------------
@@ -112,6 +142,11 @@ public:
 protected:
 	virtual void BeginPlay() override;
 private:
+
+	/**
+	 * @brief Used to lock Inventories array while iterating over it.
+	 */
+	mutable FCriticalSection InventoryListLock;
 
 	/**
 	 * @brief Maps inventory names to their respective inventory grants.

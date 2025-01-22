@@ -51,7 +51,6 @@ void AARPGEnemyCharacter::PostInitializeComponents()
 
 	if (GetNetMode() != NM_DedicatedServer && AbilitySystemComponent)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Adding delegates for enemy"));
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(HealthAttributeSet->GetHealthAttribute()).AddUObject(this, &AARPGEnemyCharacter::HandleCoreAttributeValueChanged);
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(HealthAttributeSet->GetHealthMaxAttribute()).AddUObject(this, &AARPGEnemyCharacter::HandleCoreAttributeValueChanged);
 	}
@@ -89,12 +88,10 @@ void AARPGEnemyCharacter::HandleCoreAttributeValueChanged(const FOnAttributeChan
 	// Update the view model with new attribute values
 	if (Data.Attribute == UARPGHealthAttributeSet::GetHealthAttribute())
 	{
-		UE_LOG(LogTemp, Log, TEXT("Enemy Core attribute changed: Health! %f"), Data.NewValue);
 		// TODO: Update the health bar widget for this enemy
 	}
 	else if (Data.Attribute == UARPGHealthAttributeSet::GetHealthMaxAttribute())
 	{
-		UE_LOG(LogTemp, Log, TEXT("Enemy Core attribute changed: HealthMax! %f"), Data.NewValue);
 		// TODO: Update the health bar widget for this enemy
 	}
 	else

@@ -19,55 +19,63 @@ void UInventorySystemComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 UInventorySystemComponent::UInventorySystemComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-}
 
+	SetIsReplicatedByDefault(true);
+}
 
 void UInventorySystemComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Example of how to give an inventory
-	/*UInventory* Inventory = NewObject<UInventory>(this);
-	GiveInventory(Inventory, FName("DefaultInventory"));
-	DebugDumpInventories();*/
 }
 
-
-void UInventorySystemComponent::GiveInventory(UInventory* Inventory, const FInventoryPermissionSet& PermissionSet, FName Name)
+void UInventorySystemComponent::GiveInventory(UInventory* Inventory, const FInventoryPermissionSet& PermissionSet)
 {
 	check(Inventory != nullptr);
-	check(Name.IsValid());
 
 	if (GetOwnerRole() != ENetRole::ROLE_Authority)
 	{
-		INVENTORY_LOG(Error, TEXT("GiveInventory called on client! Cannot grant UInventory %s with inventory name: %s"), *Inventory->GetName(), *Name.ToString());
+		INVENTORY_LOG(Error, TEXT("GiveInventory called on client! Cannot grant UInventory %s"), *Inventory->GetName());
 		return;
 	}
 
-	INVENTORY_LOG(Log, TEXT("GiveInventory called on server! Granting UInventory %s with inventory name: %s"), *Inventory->GetName(), *Name.ToString());
+	INVENTORY_LOG(Log, TEXT("GiveInventory called on server! Granting UInventory %s"), *Inventory->GetName());
 
-
-	/** Lock Inventories*/
-	for (const auto& InventoryMapping : Inventories)
-	{
-		if (InventoryMapping.InventoryName == Name)
-		{
-			INVENTORY_LOG(Error, TEXT("GiveInventory failed to grant an inventory. UInventory with name %s already exists.'"), *Name.ToString());
-			return;
-		}
-	}
-
-	Inventories.Add(FInventoryGrant(Name, Inventory, PermissionSet));
-	/** Unlock Inventories*/
+	FScopeLock Lock(&InventoryListLock);
+	Inventories.Add(FInventoryGrant(Inventory, PermissionSet));
 }
 
-FInventoryGrant* UInventorySystemComponent::GetInventoryGrant(FName Name)
+UInventory* UInventorySystemComponent::CreateAndGiveInventory(TSubclassOf<UInventory> InventoryClass, const FInventoryPermissionSet& PermissionSet)
 {
-	check(Name.IsValid());
+	if (GetOwnerRole() != ENetRole::ROLE_Authority)
+	{
+		INVENTORY_LOG(Error, TEXT("CreateAndGiveInventory must be called on server! Called with role: %d"), GetOwnerRole());
+		return nullptr;
+	}
+
+	if (InventoryClass)
+	{
+		// Acquire inventory list lock
+		FScopeLock Lock(&InventoryListLock);
+
+		// Outer is this ISC
+		UInventory* Inventory = NewObject<UInventory>(this, InventoryClass);
+
+		Inventories.Add(FInventoryGrant(Inventory, PermissionSet));
+
+		return Inventory;
+	}
+
+	return nullptr;
+}
+
+FInventoryGrant* UInventorySystemComponent::GetInventoryGrant(FGuid Guid)
+{
+	check(Guid.IsValid());
 
 	FInventoryGrant* Inventory = Inventories.FindByPredicate([&](FInventoryGrant Grant)
 		{
-			return Grant.InventoryName == Name;
+			return Grant.GrantGuid == Guid;
 		});
 
 	return Inventory;
@@ -79,8 +87,8 @@ FString UInventorySystemComponent::GetDebugString() const
 
 	for (const auto& InventoryGrant : Inventories)
 	{
-		DebugString += FString::Printf(TEXT("\n- %s"),
-			*InventoryGrant.InventoryName.ToString());
+		DebugString += FString::Printf(TEXT("\n- grant guid: %s"),
+			*InventoryGrant.GrantGuid.ToString());
 	}
 
 	return DebugString;
@@ -90,5 +98,14 @@ FString UInventorySystemComponent::GetDebugString() const
 void UInventorySystemComponent::DebugDumpInventories() const
 {
 	INVENTORY_LOG(Log, TEXT("Dumping inventories..."));
-	INVENTORY_LOG(Log, TEXT("%s"), *GetDebugString());
+
+	FString DebugString = GetDebugString();
+	if (!DebugString.IsEmpty())
+	{
+		INVENTORY_LOG(Log, TEXT("%s"), *GetDebugString());
+	}
+	else
+	{
+		INVENTORY_LOG(Log, TEXT("No inventories to dump..."));
+	}
 }
