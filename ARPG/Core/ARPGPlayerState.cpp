@@ -9,6 +9,9 @@ AARPGPlayerState::AARPGPlayerState()
 {
 	SetNetUpdateFrequency(100.f);
 
+	bReplicates = true;
+	bReplicateUsingRegisteredSubObjectList = true;
+
 	// ISC
 	InventorySystemComponent = CreateDefaultSubobject<UInventorySystemComponent>(TEXT("InventorySystemComponent"));
 	InventorySystemComponent->SetIsReplicated(true);
@@ -132,7 +135,7 @@ void AARPGPlayerState::InitPlayerViewModels()
 
 void AARPGPlayerState::InitInventorySystem()
 {
-	if (!HasAuthority() || !InventorySystemComponent)
+	if (!InventorySystemComponent)
 	{
 		return;
 	}

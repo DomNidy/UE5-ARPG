@@ -27,6 +27,8 @@ class ARPG_API UItemData : public UDataAsset
 	GENERATED_BODY()
 
 public:
+	virtual bool IsSupportedForNetworking() const override { return true; }
+
 	// Unique ID
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Classification")
 	FGuid ItemId;

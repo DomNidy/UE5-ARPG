@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Inventory.h"
+#include "Net/UnrealNetwork.h"
 
 UInventory::UInventory(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -11,14 +12,24 @@ AActor* UInventory::GetOwningActor() const
 	return nullptr;
 }
 
+void UInventory::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UInventory, Slots);
+	DOREPLIFETIME(UInventory, OwningInventorySystemComponent);
+}
+
+
 UInventorySystemComponent* UInventory::GetOwningInventorySystemComponent() const
 {
-	return nullptr;
+	return OwningInventorySystemComponent;
 }
 
 UInventorySystemComponent* UInventory::GetOwningInventorySystemComponentChecked() const
 {
-	return nullptr;
+	check(OwningInventorySystemComponent != nullptr);
+	return OwningInventorySystemComponent;
 }
 
 bool UInventory::IsValidInventory() const

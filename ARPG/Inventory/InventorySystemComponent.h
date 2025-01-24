@@ -8,11 +8,6 @@
 #include "Misc/Guid.h"
 #include "InventorySystemComponent.generated.h"
 
-#define INVENTORY_LOG(Verbosity, Format, ...) \
-{ \
-	UE_LOG(LogInventorySystem, Verbosity, Format, ##__VA_ARGS__); \
-}
-
 /**
  * @brief When an inventory is given to an ISC, a
  * permission set must be specified. This indicates what actions
@@ -51,14 +46,12 @@ struct FInventoryGrant
 	GENERATED_BODY()
 	FInventoryGrant()
 	{
-		Inventory = nullptr;
 		GrantGuid = FGuid::NewGuid();
 		InventoryPermissionSet = FInventoryPermissionSet();
 	}
 
-	FInventoryGrant(UInventory* Inventory, FInventoryPermissionSet InventoryPermissionSet)
-		: Inventory(Inventory)
-		, InventoryPermissionSet(InventoryPermissionSet)
+	FInventoryGrant(FInventoryPermissionSet InventoryPermissionSet)
+		: InventoryPermissionSet(InventoryPermissionSet)
 	{
 		GrantGuid = FGuid::NewGuid();
 	}
@@ -68,9 +61,6 @@ struct FInventoryGrant
 	 */
 	UPROPERTY(meta = (IgnoreForMemberInitializationTest))
 	FGuid GrantGuid;
-
-	UPROPERTY()
-	TObjectPtr<UInventory> Inventory;
 
 	UPROPERTY()
 	FInventoryPermissionSet InventoryPermissionSet;
@@ -94,6 +84,17 @@ public:
 	// Sets default values for this component's properties
 	UInventorySystemComponent();
 
+
+	//~UObject interface
+	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
+	//~End of UObject interface
+
+	//~UActorComponent interface
+	virtual void InitializeComponent() override;
+	virtual void UninitializeComponent() override;
+	virtual void ReadyForReplication() override;
+	//~End of UActorComponent interface
+
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Inventories
 	// ----------------------------------------------------------------------------------------------------------------
@@ -106,13 +107,11 @@ public:
 	 */
 	virtual void GiveInventory(UInventory* Inventory, const FInventoryPermissionSet& PermissionSet);
 
-
 	/**
 	 * @brief Creates a new UInventory with the specified Inventory class, and then grants the inventory.
 	 *
 	 * @param InventoryClass Class of the Inventory we want to create
 	 * @param PermissionSet The permissions
-	 * @param Name
 	 * @return
 	 */
 	virtual UInventory* CreateAndGiveInventory(TSubclassOf<UInventory> InventoryClass, const FInventoryPermissionSet& PermissionSet);
@@ -149,8 +148,27 @@ private:
 	mutable FCriticalSection InventoryListLock;
 
 	/**
-	 * @brief Maps inventory names to their respective inventory grants.
+	 * @brief Array of all inventory grants this ISC has.
 	 */
-	UPROPERTY(Replicated)
-	TArray<FInventoryGrant> Inventories;
+	UPROPERTY(ReplicatedUsing = OnRep_InventoryGrants)
+	TArray<FInventoryGrant> InventoryGrants;
+
+	/**
+	 * @brief Function executed on the client when InventoryGrants gets repped down from server.
+	 */
+	UFUNCTION()
+	virtual void OnRep_InventoryGrants();
+
+	/**
+	 * @brief Array of all inventories this ISC can "see".
+	 */
+	UPROPERTY(ReplicatedUsing = OnRep_Inventories)
+	TArray<TObjectPtr<UInventory>> Inventories;
+
+	/**
+	 * @brief Function executed on the client when Inventories gets repped down from server.
+	 */
+	UFUNCTION()
+	virtual void OnRep_Inventories();
+
 };

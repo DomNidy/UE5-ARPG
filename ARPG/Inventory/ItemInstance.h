@@ -39,6 +39,7 @@ public:
 	UItemInstance(const FObjectInitializer& ObjectInitializer);
 
 	virtual int32 GetQuantity() const;
+	virtual int32 GetMaxQuantity() const;
 	virtual const UItemData* GetItemData() const;
 
 	// ----------------------------------------------------------------------------------------------------------------
@@ -54,9 +55,9 @@ public:
 	 *  2. Temporarily stores the item in the staging inventory (a game-wide holding area)
 	 *  3. Attempts to transfer the item from staging to the target inventory
 	 *  4. If transfer fails, removes the item from staging inventory
-	 * 
-	 * The staging inventory is a special, game-wide inventory. It is used to guarantee all items always belong to 
-	 * an inventory, as the system relies on this assumption. Transfer to the target inventory may fail due to various 
+	 *
+	 * The staging inventory is a special, game-wide inventory. It is used to guarantee all items always belong to
+	 * an inventory, as the system relies on this assumption. Transfer to the target inventory may fail due to various
 	 * reasons, such as receive item hooks rejecting the transfer.
 	 *
 	 * @param ItemData The item to create
@@ -64,6 +65,21 @@ public:
 	 * @return Pointer to the new item
 	 */
 	static UItemInstance* CreateItemInstance(UItemData* ItemData, UInventory* Inventory);
+
+	// ----------------------------------------------------------------------------------------------------------------
+	//	Networking
+	// ----------------------------------------------------------------------------------------------------------------
+	virtual bool IsSupportedForNetworking() const override { return true; }
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// ----------------------------------------------------------------------------------------------------------------
+	//	Setters
+	// ----------------------------------------------------------------------------------------------------------------
+	UFUNCTION()
+	virtual void SetQuantity(int NewQuantity);
+	UFUNCTION()
+	virtual void SetMaxQuantity(int NewMaxQuantity);
+
 
 protected:
 	// ----------------------------------------------------------------------------------------------------------------
@@ -77,20 +93,26 @@ protected:
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Quantity
 	// ----------------------------------------------------------------------------------------------------------------
-	UPROPERTY(BlueprintReadWrite, Category = "Item|Quantity")
+	UPROPERTY(ReplicatedUsing = OnRep_MaxQuantity, EditDefaultsOnly, BlueprintReadWrite, Category = "Item|Quantity")
 	int32 MaxQuantity;
-
-	UPROPERTY(BlueprintReadWrite, Category = "Item|Quantity")
-	int32 Quantity;
 
 	UFUNCTION()
 	virtual void OnMaxQuantityChanged();
 
+	UFUNCTION()
+	virtual void OnRep_MaxQuantity();
+
+	UPROPERTY(ReplicatedUsing = OnRep_Quantity, EditDefaultsOnly, BlueprintReadWrite, Category = "Item|Quantity")
+	int32 Quantity;
 
 	UFUNCTION()
 	virtual void OnQuantityChanged();
 
-private:
+	UFUNCTION()
+	virtual void OnRep_Quantity();
+
+protected:
 	// Underlying item data. Defines what the item is and can do in gameplay code.
-	const UItemData* ItemData;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Item")
+	TObjectPtr<const UItemData> ItemData;
 };

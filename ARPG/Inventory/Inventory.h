@@ -19,6 +19,9 @@ struct FInventorySlot
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UItemInstance> Item;
+
+	UPROPERTY()
+	int32 TestProperty = 1;
 };
 
 // Event dispatched when an inventory changes
@@ -26,10 +29,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
 
 /**
  * An object where ItemInstances are stored. Any and all ItemInstances are owned by an inventory,
- * and any and all Inventories are owned by a single InventorySystemComponent. Multiple 
+ * and any and all Inventories are owned by a single InventorySystemComponent. Multiple
  * InventorySystemComponents can be given access to an Inventory, and the level of access an ISC
  * has over a particular inventory can be controlled with their FInventoryGrant.
- * 
+ *
  *
  * Ownership & Grants:
  *
@@ -72,7 +75,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
  *
  * All operations are validated on the authority (server).
  */
-UCLASS(Blueprintable)
+UCLASS(Blueprintable, BlueprintType)
 class ARPG_API UInventory : public UObject
 {
 	GENERATED_BODY()
@@ -84,6 +87,13 @@ public:
 	AActor* GetOwningActor() const;
 	UInventorySystemComponent* GetOwningInventorySystemComponent() const;
 	UInventorySystemComponent* GetOwningInventorySystemComponentChecked() const;
+
+	// ----------------------------------------------------------------------------------------------------------------
+	//	Networking
+	// ----------------------------------------------------------------------------------------------------------------
+	virtual bool IsSupportedForNetworking() const override { return true; }
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Inventory validation
@@ -117,7 +127,7 @@ protected:
 	/**
 	 * @brief Slots of the inventory, which may or may not contain an ItemInstance.
 	 */
-	UPROPERTY(BlueprintReadWrite, Category = "Inventory")
+	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Inventory")
 	TArray<FInventorySlot> Slots;
 
 
@@ -149,7 +159,15 @@ protected:
 	 * When this code runs, we now have ownership over the Item.
 	 */
 	virtual void PostItemReceived(const UItemInstance* Item, const UInventory* SourceInventory) const;
-#pragma endregion
+#pragma 
 private:
-	UInventorySystemComponent* OwningInventory;
+	/**
+	 * @brief Reference to the ISC that owns this inventory.
+	 *
+	 * This will only be defined and non null on the client that is the original
+	 * owner of this inventory (not someone that was given a grant after it was created),
+	 * and on the server.
+	 */
+	UPROPERTY(Replicated)
+	TObjectPtr<UInventorySystemComponent> OwningInventorySystemComponent;
 };
