@@ -48,6 +48,8 @@ public:
 	// Icon displayed in UI inventory windows
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
 	UTexture2D* Icon;
+
+	virtual FString GetDebugString() const;
 };
 
 
@@ -74,4 +76,6 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment")
 	UARPGAbilitySet* AbilitySet;
+
+	virtual FString GetDebugString() const override;
 };

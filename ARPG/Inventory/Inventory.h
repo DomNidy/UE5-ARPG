@@ -17,11 +17,20 @@ struct FInventorySlot
 {
 	GENERATED_BODY()
 
+public:
+	virtual FString GetDebugString() const;
+
+	/**
+	 * @brief ItemInstance currently inside this slot
+	 */
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UItemInstance> Item;
 
-	UPROPERTY()
-	int32 TestProperty = 1;
+	/**
+	 * @brief What item "types" should not be allowed inside this slot
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Filters")
+	FGameplayTagContainer BlockItemTypes;
 };
 
 // Event dispatched when an inventory changes
@@ -127,7 +136,7 @@ protected:
 	/**
 	 * @brief Slots of the inventory, which may or may not contain an ItemInstance.
 	 */
-	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Inventory")
+	UPROPERTY(Replicated, EditDefaultsOnly, Category = "Inventory")
 	TArray<FInventorySlot> Slots;
 
 

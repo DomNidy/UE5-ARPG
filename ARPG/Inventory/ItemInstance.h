@@ -81,6 +81,7 @@ public:
 	virtual void SetMaxQuantity(int NewMaxQuantity);
 
 
+	virtual FString GetDebugString() const;
 protected:
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Item ownership: Items must be owned by an Inventory, which in turn must be owned by an InventorySystemComponent

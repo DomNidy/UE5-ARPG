@@ -84,7 +84,6 @@ public:
 	// Sets default values for this component's properties
 	UInventorySystemComponent();
 
-
 	//~UObject interface
 	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 	//~End of UObject interface
@@ -99,8 +98,11 @@ public:
 	//	Inventories
 	// ----------------------------------------------------------------------------------------------------------------
 	/**
-	 * @brief Creates an inventory grant and assigns it to this ISC. If the owner actor is not authoritative, this is ignored.
-	 * An owner actor is considered authoritative if it's net role (locally) is ENetRole::ROLE_Authority
+	 * @brief Creates an inventory grant and assigns it to this ISC. 
+	 *
+	 * If the owner actor is not authoritative, this is ignored. An owner actor is considered authoritative if it's net 
+	 * role (locally) is ENetRole::ROLE_Authority
+	 * 
 	 *
 	 * @param Inventory The inventory we want to give this ASC access to.
 	 * @param PermissionSet Permission level that this ISC should have over the Inventory.

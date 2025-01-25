@@ -69,6 +69,7 @@ void UInventorySystemComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 void UInventorySystemComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
 }
 
 void UInventorySystemComponent::GiveInventory(UInventory* Inventory, const FInventoryPermissionSet& PermissionSet)
@@ -221,18 +222,42 @@ FString UInventorySystemComponent::GetDebugString() const
 	}
 
 	// Details for each inventory
-	for (int32 Index = 0; Index < Inventories.Num(); Index++)
+	for (int32 InvIndex = 0; InvIndex < Inventories.Num(); InvIndex++)
 	{
-		const auto& Inventory = Inventories[Index];
+		const auto& Inventory = Inventories[InvIndex];
 
 		DebugString += FString::Printf(
 			TEXT("\n[Inventory %d]\n")
-			TEXT("│ Is Valid		      : %s\n")
-			TEXT("%s\n"),
-			Index + 1,
+			TEXT("│ Is Valid              : %s\n")
+			TEXT("│ Num Slots             : %d\n"),
+			InvIndex + 1,
 			Inventory != nullptr ? TEXT("✓ Yes") : TEXT("✗ No"),
-			*SubSeparator
+			Inventory != nullptr ? Inventory->Slots.Num() : -1
 		);
+
+		// Add slot information if inventory is valid
+		if (Inventory != nullptr)
+		{
+			DebugString += TEXT("│\n│ Slot Contents:\n");
+
+			// Iterate through all slots
+			for (int32 SlotIndex = 0; SlotIndex < Inventory->Slots.Num(); SlotIndex++)
+			{
+				const auto& Slot = Inventory->Slots[SlotIndex];
+
+				DebugString += FString::Printf(TEXT("│\n│ [Slot %d]\n"), SlotIndex);
+
+				// Get the slot's debug string and indent it
+				TArray<FString> SlotDebugLines;
+				Slot.GetDebugString().ParseIntoArrayLines(SlotDebugLines);
+				for (const FString& Line : SlotDebugLines)
+				{
+					DebugString += FString::Printf(TEXT("│     %s\n"), *Line);
+				}
+			}
+		}
+
+		DebugString += FString::Printf(TEXT("%s\n"), *SubSeparator);
 	}
 
 	return DebugString;
