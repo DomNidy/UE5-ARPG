@@ -2,6 +2,8 @@
 
 #include "Inventory.h"
 #include "Net/UnrealNetwork.h"
+#include "InventoryLogMacros.h"
+#include "InventorySystemComponent.h"
 
 UInventory::UInventory(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -49,16 +51,84 @@ FInventorySlot& UInventory::GetSlot(int Index)
 	return Slots[Index];
 }
 
-bool UInventory::TryReceiveItem(const UItemInstance* Item, const UInventory* SourceInventory)
+void UInventory::TryReceiveItem(UItemInstance* Item)
 {
+
+	if (GetOwningInventorySystemComponent()->GetOwnerRole() != ENetRole::ROLE_Authority)
+	{
+		INVENTORY_LOG_WARNING(TEXT("UInventory::TryReceiveItem was called on client. This should only be called on server."));
+		return;
+	}
+
+	checkf(Item, TEXT("UInventory::TryReceiveItem called with a null Item"));
+	checkf(IsValid(Item), TEXT("UInventory::TryReceiveItem called with an invalid Item (pending kill)"));
+	checkf(Item->OwningInventory == nullptr, TEXT("UInventory::TryReceiveItem called on item that already has an owner. Use transfer methods instead."));
+
+	// Lock all slots
+	FScopeLock Lock(&InventoryItemsLock);
+
+	// Early exit if no space available
+	if (!HasEmptySlotForItemType(Item->ItemTypeTag))
+	{
+		INVENTORY_LOG_WARNING(TEXT("Inventory %s tried to receive an item, but no empty slot that could accept the item was found. Item name: %s"), *GetName(), *Item->GetName());
+		return;
+	}
+
+	PreItemReceived(Item);
+
+	// Get pointer to the slot we want to add the item to
+	FInventorySlot* TargetSlot = nullptr;
+	for (FInventorySlot& Slot : Slots)
+	{
+		// if the slot is empty and doesn't block this item type, use this one
+		if (Slot.DoesPermitItemType(Item->ItemTypeTag) && Slot.Item == nullptr)
+		{
+			TargetSlot = &Slot;
+			break;
+		}
+	}
+
+	checkf(TargetSlot && TargetSlot->Item == nullptr,
+		TEXT("Failed to find valid slot despite prior availability check"));
+
+	// Transfer item ownership
+	Item->OwningInventory = this;
+	TargetSlot->Item = Item;
+
+	// Update the outer of the item to this inventory we do this because
+	// items created by the UItemInstance::CreateItemInstance method are 
+	// initially created with the transient package as their outer UObject
+	Item->Rename(nullptr, this);
+
+	PostItemReceived(Item);
+
+	checkf(TargetSlot->Item == Item && Item->OwningInventory == this, TEXT("Inventory/item state mismatch after transfer."));
+
+	INVENTORY_LOG(Log, TEXT("Inventory %s successfully received new item instance %s"), *GetOwningInventorySystemComponent()->GetOwner()->GetName(), *Item->GetItemDisplayName().ToString());
+
+	return;
+}
+
+bool UInventory::HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const
+{
+	for (const FInventorySlot& Slot : Slots)
+	{
+		// if the slot is empty and doesn't block this item type
+		if (Slot.DoesPermitItemType(ItemTypeTag) && Slot.Item == nullptr)
+		{
+			return true;
+		}
+	}
+
 	return false;
 }
 
-void UInventory::PreItemReceived(const UItemInstance* Item, const UInventory* SourceInventory) const
+
+void UInventory::PreItemReceived(const UItemInstance* Item) const
 {
 }
 
-void UInventory::PostItemReceived(const UItemInstance* Item, const UInventory* SourceInventory) const
+void UInventory::PostItemReceived(const UItemInstance* Item) const
 {
 	OnInventoryChanged.Broadcast();
 }
@@ -109,3 +179,14 @@ FString FInventorySlot::GetDebugString() const
 
 	return DebugString;
 }
+
+bool FInventorySlot::DoesPermitItemType(FGameplayTag ItemTypeTag) const
+{
+	if (BlockItemTypes.HasTagExact(ItemTypeTag))
+	{
+		return false;
+	}
+
+	return true;
+}
+

@@ -21,6 +21,12 @@ public:
 	virtual FString GetDebugString() const;
 
 	/**
+	 * @brief Check if this slot permits (does not block) items with the ItemTypeTag
+	 * @return True if permitted, false if not.
+	 */
+	bool DoesPermitItemType(FGameplayTag ItemTypeTag) const;
+
+	/**
 	 * @brief ItemInstance currently inside this slot
 	 */
 	UPROPERTY(BlueprintReadOnly)
@@ -140,13 +146,26 @@ protected:
 	TArray<FInventorySlot> Slots;
 
 
-protected:
+
 #pragma region ReceivingItems
+public:
+	/**
+	 * @brief Attempts to add an ItemInstance to this inventory
+	 * @param Item item instance we're trying to add
+	 *
+	 * This method is ignored if called on client.
+	 *
+	 * Note: This should only be called on items that are not owned by an inventory
+	 * will throw an error if called on an item that already has an owner.
+	 */
+	void TryReceiveItem(UItemInstance* Item);
+protected:
 	friend class UInventorySystemComponent;
-
-
-	/** Method invoked by the InventorySystemComponent this inventory belongs to. */
-	bool TryReceiveItem(const UItemInstance* Item, const UInventory* SourceInventory);
+	/**
+	 * @brief Does this inventory have an empty item slot that can hold an item of
+	 * of ItemType. (i.e., it's not blocked by slot item filters).
+	 */
+	bool HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const;
 
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Receiving item hooks
@@ -158,7 +177,7 @@ protected:
 	 *
 	 * When this code runs, the SourceInventory still has ownership over the Item.
 	 */
-	virtual void PreItemReceived(const UItemInstance* Item, const UInventory* SourceInventory) const;
+	virtual void PreItemReceived(const UItemInstance* Item) const;
 
 	/**
 	 * @brief Executed after an item is successfully added (received) to this inventory.
@@ -167,7 +186,7 @@ protected:
 	 *
 	 * When this code runs, we now have ownership over the Item.
 	 */
-	virtual void PostItemReceived(const UItemInstance* Item, const UInventory* SourceInventory) const;
+	virtual void PostItemReceived(const UItemInstance* Item) const;
 #pragma 
 private:
 	/**
@@ -179,4 +198,10 @@ private:
 	 */
 	UPROPERTY(Replicated)
 	TObjectPtr<UInventorySystemComponent> OwningInventorySystemComponent;
+
+
+	/**
+	 * @brief Used to lock items being added/removed from the inventory
+	 */
+	mutable FCriticalSection InventoryItemsLock;
 };

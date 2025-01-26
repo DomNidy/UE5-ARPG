@@ -71,27 +71,11 @@ AARPGCharacter::AARPGCharacter()
 void AARPGCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-
-	// Randomly log inventories on client
-	if (!HasAuthority() && FMath::Rand() % 78 == 0)
-	{
-		AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>();
-
-		if (PS)
-		{
-			if (UInventorySystemComponent* ISC = PS->GetInventorySystemComponent())
-			{
-				UE_LOG(LogTemp, Log, TEXT("[Client] We found an ISC on AARPGCharacter::OnRep_PlayerState! Logging."));
-				ISC->DebugDumpInventories();
-			}
-		}
-	}
 }
 
 void AARPGCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
 }
 
 UAbilitySystemComponent* AARPGCharacter::GetAbilitySystemComponent() const
@@ -138,12 +122,6 @@ void AARPGCharacter::OnRep_PlayerState()
 		AbilitySystemComponent = Cast<UARPGAbilitySystemComponent>(PS->GetAbilitySystemComponent());
 		AbilitySystemComponent->InitAbilityActorInfo(PS, this);
 		OnAbilitySystemComponentUpdated(AbilitySystemComponent);
-
-		if (UInventorySystemComponent* ISC = PS->GetInventorySystemComponent())
-		{
-			UE_LOG(LogTemp, Log, TEXT("[CLIENT] We found an ISC on AARPGCharacter::OnRep_PlayerState! Dumping it."));
-			ISC->DebugDumpInventories();
-		}
 
 		// Initialize player stats viewmodel
 		if (PS->GetPlayerStatsViewModel())

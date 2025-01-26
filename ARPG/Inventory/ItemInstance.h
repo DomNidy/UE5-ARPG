@@ -38,34 +38,6 @@ class ARPG_API UItemInstance : public UObject
 public:
 	UItemInstance(const FObjectInitializer& ObjectInitializer);
 
-	virtual int32 GetQuantity() const;
-	virtual int32 GetMaxQuantity() const;
-	virtual const UItemData* GetItemData() const;
-
-	// ----------------------------------------------------------------------------------------------------------------
-	//	Item creation
-	// ----------------------------------------------------------------------------------------------------------------
-	/**
-	 * @brief Create an item instance with the specified ItemData and add it to the Inventory
-	 *
-	 * This method call will be ignored if not ran on server.
-	 *
-	 * Process Flow:
-	 *	1. Creates a new item instance from the specified ItemData
-	 *  2. Temporarily stores the item in the staging inventory (a game-wide holding area)
-	 *  3. Attempts to transfer the item from staging to the target inventory
-	 *  4. If transfer fails, removes the item from staging inventory
-	 *
-	 * The staging inventory is a special, game-wide inventory. It is used to guarantee all items always belong to
-	 * an inventory, as the system relies on this assumption. Transfer to the target inventory may fail due to various
-	 * reasons, such as receive item hooks rejecting the transfer.
-	 *
-	 * @param ItemData The item to create
-	 * @param Inventory The inventory the item should be added to
-	 * @return Pointer to the new item
-	 */
-	static UItemInstance* CreateItemInstance(UItemData* ItemData, UInventory* Inventory);
-
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Networking
 	// ----------------------------------------------------------------------------------------------------------------
@@ -73,18 +45,39 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// ----------------------------------------------------------------------------------------------------------------
-	//	Setters
+	//	Item creation
 	// ----------------------------------------------------------------------------------------------------------------
-	UFUNCTION()
-	virtual void SetQuantity(int NewQuantity);
-	UFUNCTION()
-	virtual void SetMaxQuantity(int NewMaxQuantity);
+	/**
+	 * @brief Create an item instance and initialize it with the provided UItemData data asset
+	 *
+	 * Notes:
+	 *	- Call is ignored if not on dedicated server or standalone
+	 *  - The resulting item has no owning Inventory.
+	 *
+	 * @param WorldContext This is used to provide context needed to create the item successfully.
+	 *	Since this is a static method, we have no knowledge about the state of the game world while running this method,
+	 *  and so, we use the WorldContext to retrieve this information.
+	 * @param ItemData Class of the item to create
+	 * @param BaseItemData The UItemData this item should be initialized with
+	 * @return Pointer to the new item
+	 */
+	static UItemInstance* CreateItemInstance(const UWorld* WorldContext, TObjectPtr<UItemData> BaseItemData);
 
-
-	virtual FString GetDebugString() const;
 protected:
+	/**
+	 * @brief Initializes an item with the provided UItemData
+	 * @param BaseItemData The UItemData this item should be initialized with
+	 *
+	 * This should be overriden by subclasses to intialize properties specific to that subclass
+	 *
+	 * Notes:
+	 *	- BaseItemData's properties are copied by value into the ItemInstance.
+	 */
+	virtual void InitializeItemInstance(TObjectPtr<UItemData> BaseItemData);
+
+public:
 	// ----------------------------------------------------------------------------------------------------------------
-	//	Item ownership: Items must be owned by an Inventory, which in turn must be owned by an InventorySystemComponent
+	//	Item ownership
 	// ----------------------------------------------------------------------------------------------------------------
 	/**
 	 * @brief Returns the owning UInventory.
@@ -92,9 +85,74 @@ protected:
 	UInventory* GetOwningInventory() const;
 
 	// ----------------------------------------------------------------------------------------------------------------
+	//	Getters for item properties
+	// ----------------------------------------------------------------------------------------------------------------
+	UFUNCTION(BlueprintCallable, Category = "Item|Item Properties")
+	virtual const FGuid& GetItemId() const { return ItemId; }
+
+	UFUNCTION(BlueprintCallable, Category = "Item|Item Properties")
+	virtual const FGameplayTag& GetItemTypeTag() const { return ItemTypeTag; }
+
+	UFUNCTION(BlueprintCallable, Category = "Item|Item Properties")
+	virtual const FText& GetItemDisplayName() const { return ItemDisplayName; }
+
+	UFUNCTION(BlueprintCallable, Category = "Item|Item Properties")
+	virtual const FText& GetItemDescription() const { return ItemDescription; }
+
+	UFUNCTION(BlueprintCallable, Category = "Item|Item Properties")
+	virtual const UTexture2D* GetItemIcon() const { return ItemIcon; }
+
+	// ----------------------------------------------------------------------------------------------------------------
+	//	Getters for item instance state
+	// ----------------------------------------------------------------------------------------------------------------
+	UFUNCTION(BlueprintCallable, Category = "Item|Item Instance State")
+	virtual int32 GetQuantity() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Item|Item Instance State")
+	virtual int32 GetMaxQuantity() const;
+
+	// ----------------------------------------------------------------------------------------------------------------
+	//	Misc/debug getters
+	// ----------------------------------------------------------------------------------------------------------------
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	virtual FString GetDebugString() const;
+
+private:
+	friend UInventory;
+	UInventory* OwningInventory;
+
+protected:
+	// Unique ID
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Classification")
+	FGuid ItemId;
+
+	// Used by the filtering system and other systems to classify and query for items
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Classification")
+	FGameplayTag ItemTypeTag;
+
+	// Localized name for display
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Basic")
+	FText ItemDisplayName;
+
+	// Localized description
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Basic")
+	FText ItemDescription;
+
+	// Icon displayed in UI inventory windows
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Visual")
+	UTexture2D* ItemIcon;
+
+protected:
+	// ----------------------------------------------------------------------------------------------------------------
 	//	Quantity
 	// ----------------------------------------------------------------------------------------------------------------
-	UPROPERTY(ReplicatedUsing = OnRep_MaxQuantity, EditDefaultsOnly, BlueprintReadWrite, Category = "Item|Quantity")
+	UFUNCTION()
+	virtual void SetQuantity(int NewQuantity);
+
+	UFUNCTION()
+	virtual void SetMaxQuantity(int NewMaxQuantity);
+
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_MaxQuantity, EditDefaultsOnly, BlueprintReadWrite, Category = "Item|Quantity")
 	int32 MaxQuantity;
 
 	UFUNCTION()
@@ -103,7 +161,7 @@ protected:
 	UFUNCTION()
 	virtual void OnRep_MaxQuantity();
 
-	UPROPERTY(ReplicatedUsing = OnRep_Quantity, EditDefaultsOnly, BlueprintReadWrite, Category = "Item|Quantity")
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_Quantity, EditDefaultsOnly, BlueprintReadWrite, Category = "Item|Quantity")
 	int32 Quantity;
 
 	UFUNCTION()
@@ -111,9 +169,4 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_Quantity();
-
-protected:
-	// Underlying item data. Defines what the item is and can do in gameplay code.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Item")
-	TObjectPtr<const UItemData> ItemData;
 };

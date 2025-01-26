@@ -152,21 +152,6 @@ void UInventorySystemComponent::OnRep_InventoryGrants()
 	check(!GetOwner()->HasAuthority());
 
 	INVENTORY_LOG(Log, TEXT("[CLIENT] OnRep_InventoryGrants ran"));
-
-	for (const auto& InventoryGrant : InventoryGrants)
-	{
-
-		check(GetOwner() != nullptr);
-		INVENTORY_LOG(Log, TEXT("ISC Owner: %s"), *GetOwner()->GetName());
-
-		check(InventoryGrant.GrantGuid.IsValid()); // valid
-		INVENTORY_LOG(Log, TEXT("Grant guid: %s"), *InventoryGrant.GrantGuid.ToString());
-
-		INVENTORY_LOG(Log, TEXT("Perms:\n - allow take: %s, \n - allow put: %s"),
-			InventoryGrant.InventoryPermissionSet.bAllowTakeItemsOut ? TEXT("True") : TEXT("False"),
-			InventoryGrant.InventoryPermissionSet.bAllowPutItemsIn ? TEXT("True") : TEXT("False"));
-
-	}
 }
 
 void UInventorySystemComponent::OnRep_Inventories()
@@ -174,18 +159,6 @@ void UInventorySystemComponent::OnRep_Inventories()
 	check(!GetOwner()->HasAuthority());
 
 	INVENTORY_LOG(Log, TEXT("[CLIENT] OnRep_Inventories ran"));
-
-	for (int32 Index = 0; Index < Inventories.Num(); Index++)
-	{
-		const auto& Inventory = Inventories[Index];
-
-		INVENTORY_LOG(Log, TEXT("\n[Inventory %d]\n│ Is Valid		      : %s\n"),
-			Index + 1,
-			Inventory != nullptr ? TEXT("✓ Yes") : TEXT("✗ No")
-		);
-		INVENTORY_LOG(Log, TEXT("ISC Owner: %s"), *GetOwner()->GetName());
-
-	}
 }
 
 FString UInventorySystemComponent::GetDebugString() const

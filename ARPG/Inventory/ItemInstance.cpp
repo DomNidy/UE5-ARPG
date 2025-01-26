@@ -11,6 +11,7 @@ UItemInstance::UItemInstance(const FObjectInitializer& ObjectInitializer) : Supe
 {
 	Quantity = 0;
 	MaxQuantity = 1;
+	OwningInventory = nullptr;
 }
 
 int32 UItemInstance::GetQuantity() const
@@ -23,15 +24,35 @@ int32 UItemInstance::GetMaxQuantity() const
 	return MaxQuantity;
 }
 
-const UItemData* UItemInstance::GetItemData() const
+UItemInstance* UItemInstance::CreateItemInstance(const UWorld* WorldContext, TObjectPtr<UItemData> BaseItemData)
 {
-	return ItemData;
+	checkf(BaseItemData && IsValid(BaseItemData), TEXT("UItemInstance::CreateItemInstance called with invalid BaseItemData"));
+	checkf(WorldContext, TEXT("UItemInstance::CreateItemInstance called with null WorldContext!"));
+
+	// Only allow items to be created on dedicated server or standalone 
+	if (WorldContext->GetNetMode() != ENetMode::NM_DedicatedServer && WorldContext->GetNetMode() != ENetMode::NM_Standalone)
+	{
+		INVENTORY_LOG_WARNING(TEXT("UItemInstance::CreateItemInstance called on machine with invalid net mode. Only should be called on NM_DedicatedServer or NM_Standalone."));
+		return nullptr;
+	}
+
+	// item is initially created in the transient package (transient package is its outer uobject)
+	// outer needs to be changed when this item is given to an inventory, otherwise it won't serialize and replicate.
+	UItemInstance* NewItemInstance = NewObject<UItemInstance>(GetTransientPackage());
+
+	NewItemInstance->InitializeItemInstance(BaseItemData);
+
+	return NewItemInstance;
 }
 
-UItemInstance* UItemInstance::CreateItemInstance(UItemData* ItemData, UInventory* Inventory)
+void UItemInstance::InitializeItemInstance(TObjectPtr<UItemData> BaseItemData)
 {
-	check(Inventory);
-	return nullptr;
+	checkf(BaseItemData && IsValid(BaseItemData), TEXT("UItemInstance::InitializeItemInstance called with invalid BaseItemData"));
+	ItemDisplayName = BaseItemData->ItemDisplayName;
+	ItemDescription = BaseItemData->ItemDescription;
+	ItemTypeTag = BaseItemData->ItemTypeTag;
+	ItemId = BaseItemData->ItemId;
+	ItemIcon = BaseItemData->ItemIcon;
 }
 
 void UItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -50,7 +71,6 @@ void UItemInstance::SetQuantity(int NewQuantity)
 		return;
 	}
 
-
 	Quantity = NewQuantity;
 	INVENTORY_LOG(Log, TEXT("SERVER CHANGED QUANTITY: %d"), Quantity);
 }
@@ -63,7 +83,6 @@ void UItemInstance::SetMaxQuantity(int NewMaxQuantity)
 		return;
 	}
 
-
 	MaxQuantity = NewMaxQuantity;
 	INVENTORY_LOG(Log, TEXT("SERVER CHANGED MAX QUANTITY: %d"), MaxQuantity);
 }
@@ -71,7 +90,7 @@ void UItemInstance::SetMaxQuantity(int NewMaxQuantity)
 
 UInventory* UItemInstance::GetOwningInventory() const
 {
-	return nullptr;
+	return OwningInventory;
 }
 
 void UItemInstance::OnMaxQuantityChanged()
@@ -99,45 +118,31 @@ FString UItemInstance::GetDebugString() const
 {
 	FString DebugString;
 
-	// Header with class name
 	DebugString += TEXT("UItemInstance:\n");
 
-	// Basic instance information
+	// information about this instance
 	DebugString += FString::Printf(TEXT("- Quantity: %d/%d\n"), GetQuantity(), GetMaxQuantity());
 
-	// Owner information
+	// what inventory owns this item instance?
 	UInventory* OwningInv = GetOwningInventory();
 	DebugString += FString::Printf(TEXT("- Owning Inventory: %s\n"),
 		OwningInv ? *OwningInv->GetName() : TEXT("None"));
 
-	// Add underlying ItemData information
-	if (const UItemData* Data = GetItemData())
-	{
-		DebugString += TEXT("\nItem Data:\n");
-		// Indent the ItemData debug string for better readability
-		TArray<FString> ItemDataLines;
-		Data->GetDebugString().ParseIntoArrayLines(ItemDataLines);
-		for (const FString& Line : ItemDataLines)
-		{
-			DebugString += FString::Printf(TEXT("    %s\n"), *Line);
-		}
+	// information about this instance's item properties
+	DebugString += TEXT("\nItem Data:\n");
 
-		// If this is equipment data, add that information too
-		if (const UEquipmentData* EquipData = Cast<UEquipmentData>(Data))
-		{
-			DebugString += TEXT("\nEquipment Data:\n");
-			TArray<FString> EquipDataLines;
-			EquipData->GetDebugString().ParseIntoArrayLines(EquipDataLines);
-			for (const FString& Line : EquipDataLines)
-			{
-				DebugString += FString::Printf(TEXT("    %s\n"), *Line);
-			}
-		}
-	}
-	else
+	DebugString += FString::Printf(TEXT("- Item: %s\n"), *ItemDisplayName.ToString());
+	DebugString += FString::Printf(TEXT("- ID: %s\n"), *ItemId.ToString());
+	DebugString += FString::Printf(TEXT("- Item Type Tag: %s\n"), *ItemTypeTag.ToString());
+
+	// Add description if it exists
+	if (!ItemDescription.IsEmpty())
 	{
-		DebugString += TEXT("\nNo Item Data Available");
+		DebugString += FString::Printf(TEXT("Description: %s\n"), *ItemDescription.ToString());
 	}
+
+	// Add icon information
+	DebugString += FString::Printf(TEXT("Has Icon: %s"), ItemIcon != nullptr ? TEXT("Yes") : TEXT("No"));
 
 	return DebugString;
 }

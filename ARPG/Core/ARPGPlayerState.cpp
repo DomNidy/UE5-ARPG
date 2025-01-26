@@ -151,7 +151,27 @@ void AARPGPlayerState::InitInventorySystem()
 
 		if (InventoryClass)
 		{
-			InventorySystemComponent->CreateAndGiveInventory(InventoryClass, InventoryPermissionSet);
+			UInventory* NewInventory = InventorySystemComponent->CreateAndGiveInventory(InventoryClass, InventoryPermissionSet);
+
+
+			if (NewInventory)
+			{
+				UE_LOG(LogTemp, Log, TEXT("NEW INVENTORY CREATED!"));
+				UItemInstance* NewItemInstance = UItemInstance::CreateItemInstance(GetWorld(), ItemToGrant);
+
+				UE_LOG(LogTemp, Log, TEXT("Item instance outer before grant: %s"), *NewItemInstance->GetOuter()->GetName());
+
+				if (NewItemInstance)
+				{
+					UE_LOG(LogTemp, Log, TEXT("NEW ITEM INSTANCE CREATED!"));
+					NewInventory->TryReceiveItem(NewItemInstance);
+
+					UE_LOG(LogTemp, Log, TEXT("Item instance outer after grant: %s"), *NewItemInstance->GetOuter()->GetName());
+
+					InventorySystemComponent->DebugDumpInventories();
+				}
+			}
+
 		}
 	}
 }

@@ -31,6 +31,7 @@ public:
 	virtual void PreInitializeComponents() override;
 	virtual void PostInitializeComponents() override;
 
+	UFUNCTION(BlueprintCallable)
 	virtual UInventorySystemComponent* GetInventorySystemComponent() const;
 
 	//~IAbilitySystemInterface
@@ -52,7 +53,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Inventories")
 	TArray<TSubclassOf<UInventory>> InventoriesToGrant;
 
-
+	/** Items that will be granted to each inventory when they're created. Just here for testing */
+	UPROPERTY(EditDefaultsOnly, Category = "Inventories")
+	TObjectPtr<UItemData> ItemToGrant;
 
 	/** Function that handles changes to core attributes and updates UI */
 	virtual void HandleCoreAttributeValueChanged(const FOnAttributeChangeData& Data);

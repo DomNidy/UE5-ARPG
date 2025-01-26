@@ -152,7 +152,7 @@ private:
 	/**
 	 * @brief Array of all inventory grants this ISC has.
 	 */
-	UPROPERTY(ReplicatedUsing = OnRep_InventoryGrants)
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_InventoryGrants)
 	TArray<FInventoryGrant> InventoryGrants;
 
 	/**
@@ -164,7 +164,7 @@ private:
 	/**
 	 * @brief Array of all inventories this ISC can "see".
 	 */
-	UPROPERTY(ReplicatedUsing = OnRep_Inventories)
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_Inventories)
 	TArray<TObjectPtr<UInventory>> Inventories;
 
 	/**
