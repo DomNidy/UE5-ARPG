@@ -11,6 +11,11 @@ UInventory::UInventory(const FObjectInitializer& ObjectInitializer) : Super(Obje
 
 AActor* UInventory::GetOwningActor() const
 {
+	if (OwningInventorySystemComponent && OwningInventorySystemComponent->GetOwner())
+	{
+		return OwningInventorySystemComponent->GetOwner();
+	}
+
 	return nullptr;
 }
 
@@ -18,10 +23,9 @@ void UInventory::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UInventory, Slots);
+	DOREPLIFETIME(UInventory, SlotList);
 	DOREPLIFETIME(UInventory, OwningInventorySystemComponent);
 }
-
 
 UInventorySystemComponent* UInventory::GetOwningInventorySystemComponent() const
 {
@@ -44,16 +48,8 @@ bool UInventory::IsValidInventory() const
 	return true;
 }
 
-FInventorySlot& UInventory::GetSlot(int Index)
-{
-	check(Slots.IsValidIndex(Index));
-
-	return Slots[Index];
-}
-
 void UInventory::TryReceiveItem(UItemInstance* Item)
 {
-
 	if (GetOwningInventorySystemComponent()->GetOwnerRole() != ENetRole::ROLE_Authority)
 	{
 		INVENTORY_LOG_WARNING(TEXT("UInventory::TryReceiveItem was called on client. This should only be called on server."));
@@ -64,11 +60,8 @@ void UInventory::TryReceiveItem(UItemInstance* Item)
 	checkf(IsValid(Item), TEXT("UInventory::TryReceiveItem called with an invalid Item (pending kill)"));
 	checkf(Item->OwningInventory == nullptr, TEXT("UInventory::TryReceiveItem called on item that already has an owner. Use transfer methods instead."));
 
-	// Lock all slots
-	FScopeLock Lock(&InventoryItemsLock);
-
 	// Early exit if no space available
-	if (!HasEmptySlotForItemType(Item->ItemTypeTag))
+	if (!SlotList.HasEmptySlotForItemType(Item->ItemTypeTag))
 	{
 		INVENTORY_LOG_WARNING(TEXT("Inventory %s tried to receive an item, but no empty slot that could accept the item was found. Item name: %s"), *GetName(), *Item->GetName());
 		return;
@@ -78,51 +71,33 @@ void UInventory::TryReceiveItem(UItemInstance* Item)
 
 	// Get pointer to the slot we want to add the item to
 	FInventorySlot* TargetSlot = nullptr;
-	for (FInventorySlot& Slot : Slots)
+	for (FInventorySlot& Slot : SlotList.Entries)
 	{
 		// if the slot is empty and doesn't block this item type, use this one
-		if (Slot.DoesPermitItemType(Item->ItemTypeTag) && Slot.Item == nullptr)
+		if (Slot.DoesPermitItemType(Item->ItemTypeTag) && Slot.IsSlotEmpty())
 		{
 			TargetSlot = &Slot;
 			break;
 		}
 	}
 
-	checkf(TargetSlot && TargetSlot->Item == nullptr,
+	checkf(TargetSlot && TargetSlot->IsSlotEmpty(),
 		TEXT("Failed to find valid slot despite prior availability check"));
 
 	// Transfer item ownership
-	Item->OwningInventory = this;
-	TargetSlot->Item = Item;
+	SlotList.PutItemIntoSlot(*TargetSlot, Item);
 
-	// Update the outer of the item to this inventory we do this because
+	// Update the outer of the item to the owning actor. We do this because
 	// items created by the UItemInstance::CreateItemInstance method are 
 	// initially created with the transient package as their outer UObject
-	Item->Rename(nullptr, this);
+	Item->Rename(nullptr, GetOwningActor());
 
 	PostItemReceived(Item);
-
-	checkf(TargetSlot->Item == Item && Item->OwningInventory == this, TEXT("Inventory/item state mismatch after transfer."));
 
 	INVENTORY_LOG(Log, TEXT("Inventory %s successfully received new item instance %s"), *GetOwningInventorySystemComponent()->GetOwner()->GetName(), *Item->GetItemDisplayName().ToString());
 
 	return;
 }
-
-bool UInventory::HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const
-{
-	for (const FInventorySlot& Slot : Slots)
-	{
-		// if the slot is empty and doesn't block this item type
-		if (Slot.DoesPermitItemType(ItemTypeTag) && Slot.Item == nullptr)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
 
 void UInventory::PreItemReceived(const UItemInstance* Item) const
 {
@@ -133,6 +108,81 @@ void UInventory::PostItemReceived(const UItemInstance* Item) const
 	OnInventoryChanged.Broadcast();
 }
 
+
+
+bool FInventorySlot::DoesPermitItemType(FGameplayTag ItemTypeTag) const
+{
+	if (BlockItemTypes.HasTagExact(ItemTypeTag))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+TArray<UItemInstance*> FInventorySlotList::GetAllItems() const
+{
+	TArray<UItemInstance*> ItemPtrs;
+
+	// This should create a new array containing all UItemInstances that are present in 
+	// the slots of this SlotList.
+	for (const FInventorySlot& Slot : Entries)
+	{
+		if (Slot.Item != nullptr)
+		{
+			ItemPtrs.Add(Slot.Item);
+		}
+	}
+	return ItemPtrs;
+}
+
+const TArray<FInventorySlot>& FInventorySlotList::GetAllSlots() const
+{
+	return Entries;
+}
+
+void FInventorySlotList::PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize)
+{
+}
+
+void FInventorySlotList::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize)
+{
+}
+
+void FInventorySlotList::PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize)
+{
+}
+
+bool FInventorySlotList::HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const
+{
+	for (const FInventorySlot& Slot : Entries)
+	{
+		// if the slot is empty and doesn't block this item type
+		if (Slot.DoesPermitItemType(ItemTypeTag) && Slot.Item == nullptr)
+		{
+			return true;
+		}
+
+	}
+	return false;
+}
+
+void FInventorySlotList::PutItemIntoSlot(FInventorySlot& TargetSlot, UItemInstance* InItemInstance)
+{
+	// Make sure this slot actually exists in the Entries array before proceeding
+	int32 SlotIndex = Entries.Find(TargetSlot);
+	checkf(SlotIndex != INDEX_NONE, TEXT("FInventorySlotList::PutItemIntoSlot called with a target slot that did not exist in Entries"));
+
+	// Validate slot is not empty & does not block item type
+	checkf(TargetSlot.IsSlotEmpty(), TEXT("FInventorySlotList::PutItemIntoSlot called but the target slot was not empty"));
+	checkf(TargetSlot.DoesPermitItemType(InItemInstance->GetItemTypeTag()), TEXT("FInventorySlotList::PutItemIntoSlot called but the target slot does not permit items of type %s"), *InItemInstance->GetItemTypeTag().ToString());
+
+	TargetSlot.Item = InItemInstance; // Update slot to point to the item instance
+	InItemInstance->OwningInventory = OwningInventory; // Update item instance to be owned by the inventory
+
+	// Mark the slot as dirty since we updated its contents
+	MarkItemDirty(TargetSlot);
+}
 
 FString FInventorySlot::GetDebugString() const
 {
@@ -179,14 +229,3 @@ FString FInventorySlot::GetDebugString() const
 
 	return DebugString;
 }
-
-bool FInventorySlot::DoesPermitItemType(FGameplayTag ItemTypeTag) const
-{
-	if (BlockItemTypes.HasTagExact(ItemTypeTag))
-	{
-		return false;
-	}
-
-	return true;
-}
-

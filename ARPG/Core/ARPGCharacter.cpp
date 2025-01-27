@@ -71,6 +71,31 @@ AARPGCharacter::AARPGCharacter()
 void AARPGCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	/*if (HasAuthority())
+	{
+		UE_LOG(LogTemp, Log, TEXT("\n--------------- Server Begin --------------- \n"));
+		AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>();
+
+		if (!PS) return;
+		if (!PS->GetInventorySystemComponent()) return;
+
+		PS->GetInventorySystemComponent()->DebugDumpInventories();
+		UE_LOG(LogTemp, Log, TEXT("\n--------------- Server End --------------- \n"));
+
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("\n--------------- Client Begin --------------- \n"));
+		AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>();
+
+		if (!PS) return;
+		if (!PS->GetInventorySystemComponent()) return;
+
+		PS->GetInventorySystemComponent()->DebugDumpInventories();
+		UE_LOG(LogTemp, Log, TEXT("\n--------------- Client End --------------- \n"));
+
+	}*/
 }
 
 void AARPGCharacter::BeginPlay()

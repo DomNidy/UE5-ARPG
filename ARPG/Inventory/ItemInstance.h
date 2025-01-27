@@ -9,6 +9,7 @@
 
 class UInventory;
 struct FInventorySlot;
+struct FInventorySlotList;
 
 /**
  * Represents a specific instance of an item in the game world, owned by an inventory.
@@ -119,6 +120,8 @@ public:
 
 private:
 	friend UInventory;
+	
+	friend FInventorySlotList;
 	UInventory* OwningInventory;
 
 protected:

@@ -166,8 +166,9 @@ void AARPGPlayerState::InitInventorySystem()
 					UE_LOG(LogTemp, Log, TEXT("NEW ITEM INSTANCE CREATED!"));
 					NewInventory->TryReceiveItem(NewItemInstance);
 
+					UE_LOG(LogTemp, Log, TEXT("Inventory System Component outer: %s"), *InventorySystemComponent->GetOuter()->GetName());
+					UE_LOG(LogTemp, Log, TEXT("Inventory outer: %s"), *NewInventory->GetOuter()->GetName());
 					UE_LOG(LogTemp, Log, TEXT("Item instance outer after grant: %s"), *NewItemInstance->GetOuter()->GetName());
-
 					InventorySystemComponent->DebugDumpInventories();
 				}
 			}

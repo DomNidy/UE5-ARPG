@@ -19,10 +19,11 @@ bool UInventorySystemComponent::ReplicateSubobjects(UActorChannel* Channel, FOut
 {
 	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
 
-	for (const auto& Inventory : Inventories)
+	for (UInventory* Inventory : Inventories)
 	{
 		// Without this inventories won't replicate to client
 		WroteSomething |= Channel->ReplicateSubobject(Inventory, *Bunch, *RepFlags);
+
 	}
 
 	return WroteSomething;
@@ -109,7 +110,7 @@ UInventory* UInventorySystemComponent::CreateAndGiveInventory(TSubclassOf<UInven
 	// Acquire inventory list lock
 	FScopeLock Lock(&InventoryListLock);
 
-	// Outer is this ISC
+	// Outer object should be player state
 	UInventory* Inventory = NewObject<UInventory>(GetOwner(), InventoryClass);
 
 	if (Inventory)
@@ -197,36 +198,40 @@ FString UInventorySystemComponent::GetDebugString() const
 	// Details for each inventory
 	for (int32 InvIndex = 0; InvIndex < Inventories.Num(); InvIndex++)
 	{
-		const auto& Inventory = Inventories[InvIndex];
+		const UInventory* Inventory = Inventories[InvIndex];
 
 		DebugString += FString::Printf(
 			TEXT("\n[Inventory %d]\n")
-			TEXT("│ Is Valid              : %s\n")
-			TEXT("│ Num Slots             : %d\n"),
+			TEXT("│ Is Valid              : %s\n"),
 			InvIndex + 1,
-			Inventory != nullptr ? TEXT("✓ Yes") : TEXT("✗ No"),
-			Inventory != nullptr ? Inventory->Slots.Num() : -1
+			IsValid(Inventory) ? TEXT("✓ Yes") : TEXT("✗ No")
 		);
 
-		// Add slot information if inventory is valid
-		if (Inventory != nullptr)
+		if (!IsValid(Inventory))
 		{
-			DebugString += TEXT("│\n│ Slot Contents:\n");
+			continue;
+		}
 
-			// Iterate through all slots
-			for (int32 SlotIndex = 0; SlotIndex < Inventory->Slots.Num(); SlotIndex++)
+		const TArray<FInventorySlot>& Slots = Inventory->SlotList.GetAllSlots();
+
+		DebugString += FString::Printf(TEXT("│ Num Slots             : %d\n"), Slots.Num());
+
+		// Add slot information if inventory is valid
+		DebugString += TEXT("│\n│ Slot Contents:\n");
+
+		// Iterate through all slots
+		for (int32 SlotIndex = 0; SlotIndex < Slots.Num(); ++SlotIndex)
+		{
+			const auto& Slot = Slots[SlotIndex];
+
+			DebugString += FString::Printf(TEXT("│\n│ [Slot %d]\n"), SlotIndex);
+
+			// Get the slot's debug string and indent it
+			TArray<FString> SlotDebugLines;
+			Slot.GetDebugString().ParseIntoArrayLines(SlotDebugLines);
+			for (const FString& Line : SlotDebugLines)
 			{
-				const auto& Slot = Inventory->Slots[SlotIndex];
-
-				DebugString += FString::Printf(TEXT("│\n│ [Slot %d]\n"), SlotIndex);
-
-				// Get the slot's debug string and indent it
-				TArray<FString> SlotDebugLines;
-				Slot.GetDebugString().ParseIntoArrayLines(SlotDebugLines);
-				for (const FString& Line : SlotDebugLines)
-				{
-					DebugString += FString::Printf(TEXT("│     %s\n"), *Line);
-				}
+				DebugString += FString::Printf(TEXT("│     %s\n"), *Line);
 			}
 		}
 

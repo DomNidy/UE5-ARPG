@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "ItemInstance.h"
+#include "InventoryLogMacros.h"
 #include "Inventory.generated.h"
 
 class UInventorySystemComponent;
@@ -13,13 +14,13 @@ class UInventorySystemComponent;
  * A struct that can hold an ItemInstance
  */
 USTRUCT(BlueprintType)
-struct FInventorySlot
+struct FInventorySlot : public FFastArraySerializerItem
 {
 	GENERATED_BODY()
 
-public:
-	virtual FString GetDebugString() const;
+	FInventorySlot() {}
 
+	FString GetDebugString() const;
 	/**
 	 * @brief Check if this slot permits (does not block) items with the ItemTypeTag
 	 * @return True if permitted, false if not.
@@ -27,17 +28,105 @@ public:
 	bool DoesPermitItemType(FGameplayTag ItemTypeTag) const;
 
 	/**
+	 * @brief Is this slot empty? (Not item instance held by it)
+	 */
+	bool IsSlotEmpty() const { return Item == nullptr; }
+
+	bool operator==(const FInventorySlot& Other) const
+	{
+		return (BlockItemTypes == Other.BlockItemTypes && Item == Other.Item);
+	}
+
+	bool operator!=(const FInventorySlot& Other) const
+	{
+		return !(*this == Other);
+	}
+private:
+	friend FInventorySlotList;
+private:
+
+	/**
 	 * @brief ItemInstance currently inside this slot
 	 */
-	UPROPERTY(BlueprintReadOnly)
-	TObjectPtr<UItemInstance> Item;
+	UPROPERTY()
+	TObjectPtr<UItemInstance> Item = nullptr;
 
 	/**
 	 * @brief What item "types" should not be allowed inside this slot
 	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Filters")
-	FGameplayTagContainer BlockItemTypes;
+	FGameplayTagContainer BlockItemTypes = FGameplayTagContainer();
 };
+
+/**
+ * A list of FInventorySlots.
+ *
+ * Inventories use these instead of managing individual slots.
+ *
+ * Handles efficiently replicating slot contents, etc.
+ */
+USTRUCT(BlueprintType)
+struct FInventorySlotList : public FFastArraySerializer
+{
+	GENERATED_BODY()
+
+	FInventorySlotList() : OwningInventory(nullptr)
+	{
+		Entries.Empty();
+	}
+
+	FInventorySlotList(UInventory* InOwnerInventory) : OwningInventory(InOwnerInventory)
+	{
+		Entries.Empty();
+	}
+
+	TArray<UItemInstance*> GetAllItems() const;
+	const TArray<FInventorySlot>& GetAllSlots() const;
+
+public:
+	//~ Begin FFastArraySerializer contract
+	void PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize);
+	void PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize);
+	void PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize);
+	//~ EndFFastArraySerializer contract
+
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
+	{
+		INVENTORY_LOG(Log, TEXT("FInventorySlotList::NetDeltaSerialize called!"));
+		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlot, FInventorySlotList>(Entries, DeltaParams, *this);
+	}
+public:
+	/**
+	 * @brief Does this slot list have an empty item slot that can hold an item of
+	 * of ItemType. (i.e., it's not blocked by slot item filters).
+	 */
+	bool HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const;
+private:
+	friend UInventory;
+private:
+	/**
+	 * @brief Updates the contents of the specified slot and then marks it dirty.
+	 * Throws error if the provided slot does not exist within the inventory.
+	 * Throws error if the provided slot is not empty
+	 * Throws error if the provided slot blocks the item with an item filter
+	 * @param TargetSlot Slot the item should be put into
+	 * @param InItemInstance The item we want to put into the slot
+	 */
+	void PutItemIntoSlot(FInventorySlot& TargetSlot, UItemInstance* InItemInstance);
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "Slots")
+	TArray<FInventorySlot> Entries;
+
+	UPROPERTY(NotReplicated)
+	UInventory* OwningInventory;
+};
+
+template<>
+struct TStructOpsTypeTraits<FInventorySlotList> : public TStructOpsTypeTraitsBase2<FInventorySlotList>
+{
+	enum { WithNetDeltaSerializer = true };
+};
+
 
 // Event dispatched when an inventory changes
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
@@ -51,9 +140,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
  *
  * Ownership & Grants:
  *
- *     Ownership of an Inventory is held by a single InventorySystemComponent. When an InventorySystemComponent
- *	   owns an Inventory, the inventory will always be replicated to them. The server will still need to
- *	   validate an owner's actions to prevent them from cheating.
+ *     Ownership of an Inventory is held by a single InventorySystemComponent.
  *
  *	   Other InventorySystemComponents can be given granular levels of access to an Inventory they are not the owner of.
  *	   This is accomplished through the FInventoryGrant struct and permissions. Only the owner is capable of
@@ -122,28 +209,18 @@ public:
 	bool IsValidInventory() const;
 
 	// ----------------------------------------------------------------------------------------------------------------
-	//	Slots
-	// ----------------------------------------------------------------------------------------------------------------
-	/**
-	 * @brief Causes runtime error if an invalid index is passed
-	 * @return Reference to the FInventorySlot at the specified index.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	FInventorySlot& GetSlot(int Index);
-
-	// ----------------------------------------------------------------------------------------------------------------
 	//	Delegates / Events
 	// ----------------------------------------------------------------------------------------------------------------
 	/** Parameterless delegate that fires whenever the inventory changes (e.g., item added/removed, capacity changes, etc.) */
 	UPROPERTY(BlueprintAssignable, Category = "Inventory|Events")
 	FOnInventoryChanged OnInventoryChanged;
 
-protected:
+private:
 	/**
 	 * @brief Slots of the inventory, which may or may not contain an ItemInstance.
 	 */
-	UPROPERTY(Replicated, EditDefaultsOnly, Category = "Inventory")
-	TArray<FInventorySlot> Slots;
+	UPROPERTY(Replicated, EditDefaultsOnly, Category = "Inventory|Slots")
+	FInventorySlotList SlotList;
 
 
 
@@ -159,13 +236,10 @@ public:
 	 * will throw an error if called on an item that already has an owner.
 	 */
 	void TryReceiveItem(UItemInstance* Item);
+
 protected:
 	friend class UInventorySystemComponent;
-	/**
-	 * @brief Does this inventory have an empty item slot that can hold an item of
-	 * of ItemType. (i.e., it's not blocked by slot item filters).
-	 */
-	bool HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const;
+
 
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Receiving item hooks
@@ -198,10 +272,4 @@ private:
 	 */
 	UPROPERTY(Replicated)
 	TObjectPtr<UInventorySystemComponent> OwningInventorySystemComponent;
-
-
-	/**
-	 * @brief Used to lock items being added/removed from the inventory
-	 */
-	mutable FCriticalSection InventoryItemsLock;
 };
