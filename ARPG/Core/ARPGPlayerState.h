@@ -27,9 +27,11 @@ public:
 	AARPGPlayerState();
 
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	virtual void PreInitializeComponents() override;
 	virtual void PostInitializeComponents() override;
+
 
 	UFUNCTION(BlueprintCallable)
 	virtual UInventorySystemComponent* GetInventorySystemComponent() const;

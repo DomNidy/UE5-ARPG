@@ -22,7 +22,8 @@ bool UInventorySystemComponent::ReplicateSubobjects(UActorChannel* Channel, FOut
 	for (UInventory* Inventory : Inventories)
 	{
 		// Without this inventories won't replicate to client
-		WroteSomething |= Channel->ReplicateSubobject(Inventory, *Bunch, *RepFlags);
+		WroteSomething |= Channel->ReplicateSubobject(Inventory, *Bunch, *RepFlags);;
+
 	}
 
 	return WroteSomething;
@@ -50,22 +51,27 @@ void UInventorySystemComponent::ReadyForReplication()
 		{
 			if (IsValid(Inventory))
 			{
-				check(GetOwner());
 				AddReplicatedSubObject(Inventory);
 			}
 		}
 	}
 }
 
-
 void UInventorySystemComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	AActor* Owner = GetOwner();
+	UWorld* World = Owner ? Owner->GetWorld() : nullptr;
+
+	INVENTORY_LOG(Log, TEXT("UInventorySystemComponent::GetLifetimeReplicatedProps called. On server?: %s"),
+		World
+		? (World->GetNetMode() == ENetMode::NM_DedicatedServer ? TEXT("True") : TEXT("False"))
+		: TEXT("No valid world"));
+
 
 	DOREPLIFETIME(UInventorySystemComponent, Inventories);
 	DOREPLIFETIME(UInventorySystemComponent, InventoryGrants);
 }
-
 
 void UInventorySystemComponent::BeginPlay()
 {
@@ -111,7 +117,7 @@ UInventory* UInventorySystemComponent::CreateAndGiveInventory(TSubclassOf<UInven
 	FScopeLock Lock(&InventoryListLock);
 
 	// Outer object should be player state
-	UInventory* Inventory = NewObject<UInventory>(GetOwner(), InventoryClass);
+	UInventory* Inventory = NewObject<UInventory>(this, InventoryClass);
 
 	if (Inventory)
 	{

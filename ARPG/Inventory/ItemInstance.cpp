@@ -24,21 +24,20 @@ int32 UItemInstance::GetMaxQuantity() const
 	return MaxQuantity;
 }
 
-UItemInstance* UItemInstance::CreateItemInstance(const UWorld* WorldContext, TObjectPtr<UItemData> BaseItemData)
+UItemInstance* UItemInstance::CreateItemInstance(UObject* Outer, TObjectPtr<UItemData> BaseItemData)
 {
 	checkf(BaseItemData && IsValid(BaseItemData), TEXT("UItemInstance::CreateItemInstance called with invalid BaseItemData"));
-	checkf(WorldContext, TEXT("UItemInstance::CreateItemInstance called with null WorldContext!"));
+	checkf(Outer, TEXT("UItemInstance::CreateItemInstance called with null Outer!"));
+	checkf(Outer->GetWorld(), TEXT("UItemInstance::CreateItemInstance called with Outer, but the Outer has no UWorld!"));
 
 	// Only allow items to be created on dedicated server or standalone 
-	if (WorldContext->GetNetMode() != ENetMode::NM_DedicatedServer && WorldContext->GetNetMode() != ENetMode::NM_Standalone)
+	if (Outer->GetWorld()->GetNetMode() != ENetMode::NM_DedicatedServer && Outer->GetWorld()->GetNetMode() != ENetMode::NM_Standalone)
 	{
 		INVENTORY_LOG_WARNING(TEXT("UItemInstance::CreateItemInstance called on machine with invalid net mode. Only should be called on NM_DedicatedServer or NM_Standalone."));
 		return nullptr;
 	}
 
-	// item is initially created in the transient package (transient package is its outer uobject)
-	// outer needs to be changed when this item is given to an inventory, otherwise it won't serialize and replicate.
-	UItemInstance* NewItemInstance = NewObject<UItemInstance>(GetTransientPackage());
+	UItemInstance* NewItemInstance = NewObject<UItemInstance>(Outer);
 
 	NewItemInstance->InitializeItemInstance(BaseItemData);
 
@@ -59,9 +58,20 @@ void UItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+	INVENTORY_LOG(Log, TEXT("UItemInstance::GetLifetimeReplicatedProps called. On server?: %s"),
+		GetWorld()
+		? GetWorld()->GetNetMode() == ENetMode::NM_DedicatedServer ? TEXT("True") : TEXT("False")
+		: TEXT("No world"));
+
 	DOREPLIFETIME(UItemInstance, Quantity);
 	DOREPLIFETIME(UItemInstance, MaxQuantity);
 	DOREPLIFETIME(UItemInstance, OwningInventory);
+
+	DOREPLIFETIME(UItemInstance, ItemDisplayName);
+	DOREPLIFETIME(UItemInstance, ItemDescription);
+	DOREPLIFETIME(UItemInstance, ItemId);
+	DOREPLIFETIME(UItemInstance, ItemIcon);
+	DOREPLIFETIME(UItemInstance, ItemTypeTag);
 
 }
 
@@ -102,7 +112,7 @@ void UItemInstance::OnMaxQuantityChanged()
 
 void UItemInstance::OnRep_MaxQuantity()
 {
-	INVENTORY_LOG(Log, TEXT("Max quantity changed to: %d"), MaxQuantity);
+	INVENTORY_LOG_SCREEN(TEXT("Max quantity changed to: %d"), MaxQuantity);
 }
 
 void UItemInstance::OnQuantityChanged()
@@ -112,7 +122,7 @@ void UItemInstance::OnQuantityChanged()
 
 void UItemInstance::OnRep_Quantity()
 {
-	INVENTORY_LOG(Log, TEXT("Quantity changed to: %d"), Quantity);
+	INVENTORY_LOG_SCREEN(TEXT("Quantity changed to: %d"), Quantity);
 }
 
 

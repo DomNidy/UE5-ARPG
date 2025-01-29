@@ -20,7 +20,14 @@ struct FInventorySlot : public FFastArraySerializerItem
 
 	FInventorySlot() {}
 
+	//~ Begin FFastArraySerializerItem contract
+	void PreReplicatedRemove(const FInventorySlotList& InArraySerializer);
+	void PostReplicatedAdd(const FInventorySlotList& InArraySerializer);
+	void PostReplicatedChange(const FInventorySlotList& InArraySerializer);
+	//~ FFastArraySerializerItem contract
+
 	FString GetDebugString() const;
+public:
 	/**
 	 * @brief Check if this slot permits (does not block) items with the ItemTypeTag
 	 * @return True if permitted, false if not.
@@ -43,6 +50,7 @@ struct FInventorySlot : public FFastArraySerializerItem
 	}
 private:
 	friend FInventorySlotList;
+	friend UInventory;
 private:
 
 	/**
@@ -72,12 +80,12 @@ struct FInventorySlotList : public FFastArraySerializer
 
 	FInventorySlotList() : OwningInventory(nullptr)
 	{
-		Entries.Empty();
+		//Items.Empty();
 	}
 
 	FInventorySlotList(UInventory* InOwnerInventory) : OwningInventory(InOwnerInventory)
 	{
-		Entries.Empty();
+		//Items.Empty();
 	}
 
 	TArray<UItemInstance*> GetAllItems() const;
@@ -93,7 +101,7 @@ public:
 
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
-		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlot, FInventorySlotList>(Entries, DeltaParams, *this);
+		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlot, FInventorySlotList>(Items, DeltaParams, *this);
 	}
 public:
 	// ----------------------------------------------------------------------------------------------------------------
@@ -106,22 +114,18 @@ public:
 	bool HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const;
 private:
 	/**
-	 * @brief Updates the contents of the specified slot and then marks it dirty.
-	 * Throws error if the provided slot does not exist within the inventory.
-	 * Throws error if the provided slot is not empty
-	 * Throws error if the provided slot blocks the item with an item filter
-	 * @param TargetSlot Slot the item should be put into
-	 * @param InItemInstance The item we want to put into the slot
-	 */
-	void PutItemIntoSlot(FInventorySlot& TargetSlot, UItemInstance* InItemInstance);
-
-	/**
 	 * @brief Adds an empty slot to the slot list
 	 */
 	void AddEmptySlot(FInventorySlot Slot);
 private:
+	/**
+	 * The array of slots.
+	 *
+	 * Note: FFastArraySerializer documentation states that this variable **must**
+	 * be named "Items". So just leave it named like this.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Slots")
-	TArray<FInventorySlot> Entries;
+	TArray<FInventorySlot> Items;
 
 	UPROPERTY(NotReplicated)
 	UInventory* OwningInventory;

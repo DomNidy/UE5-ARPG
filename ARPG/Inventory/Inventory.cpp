@@ -24,6 +24,12 @@ void UInventory::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+
+	INVENTORY_LOG(Log, TEXT("UInventory::GetLifetimeReplicatedProps called. On server?: %s"),
+		GetWorld()
+		? GetWorld()->GetNetMode() == ENetMode::NM_DedicatedServer ? TEXT("True") : TEXT("False")
+		: TEXT("No world"));
+
 	DOREPLIFETIME(UInventory, SlotList);
 	DOREPLIFETIME(UInventory, OwningInventorySystemComponent);
 }
@@ -43,13 +49,14 @@ void UInventory::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	INVENTORY_LOG(Log, TEXT("UInventory::PostInitProperties called on %s"), *GetName());
+	INVENTORY_LOG(Log, TEXT("UInventory::PostInitProperties called on inventory: %s"), *GetFullGroupName(false));
 
 	// Update the SlotList's owning inventory for instances (not the CDO)
 	if (!HasAnyFlags(RF_ClassDefaultObject))
 	{
-		INVENTORY_LOG(Log, TEXT("Set owning inventory to this: %s"), *GetName());
 		SlotList.OwningInventory = this;
+		SlotList.MarkArrayDirty();
+		INVENTORY_LOG(Log, TEXT("\tRegistered SlotList for this inventory."));
 	}
 }
 
@@ -71,8 +78,10 @@ void UInventory::TryReceiveItem(UItemInstance* Item)
 		return;
 	}
 
-	checkf(Item, TEXT("UInventory::TryReceiveItem called with a null Item"));
-	checkf(IsValid(Item), TEXT("UInventory::TryReceiveItem called with an invalid Item (pending kill)"));
+	INVENTORY_LOG(Log, TEXT(" UInventory::TryReceiveItem called (on server)!"));
+
+	checkf(IsValid(Item), TEXT("UInventory::TryReceiveItem called with an invalid Item (potentially pending kill)"));
+	checkf(IsValidInventory(), TEXT("UInventory::TryReceiveItem called, but the UInventory was invalid (had OwningInventorySystemComponent)"));
 	checkf(Item->OwningInventory == nullptr, TEXT("UInventory::TryReceiveItem called on item that already has an owner. Use transfer methods instead."));
 
 	// Early exit if no space available
@@ -86,7 +95,7 @@ void UInventory::TryReceiveItem(UItemInstance* Item)
 
 	// Get pointer to the slot we want to add the item to
 	FInventorySlot* TargetSlot = nullptr;
-	for (FInventorySlot& Slot : SlotList.Entries)
+	for (FInventorySlot& Slot : SlotList.Items)
 	{
 		// if the slot is empty and doesn't block this item type, use this one
 		if (Slot.DoesPermitItemType(Item->ItemTypeTag) && Slot.IsSlotEmpty())
@@ -100,12 +109,14 @@ void UInventory::TryReceiveItem(UItemInstance* Item)
 		TEXT("Failed to find valid slot despite prior availability check"));
 
 	// Transfer item ownership
-	SlotList.PutItemIntoSlot(*TargetSlot, Item);
+	TargetSlot->Item = Item; // Update slot to point to the item instance
+	Item->OwningInventory = this; // Update item instance to be owned by the inventory
 
-	// Update the outer of the item to the owning actor. We do this because
-	// items created by the UItemInstance::CreateItemInstance method are 
-	// initially created with the transient package as their outer UObject
-	Item->Rename(nullptr, GetOwningActor());
+	/** This sets the outer of the ItemInstance to the ISC, meaning that the ItemInstance is now a subobject of the ISC. */
+	Item->Rename(nullptr, OwningInventorySystemComponent);
+
+	// Mark the slot as dirty since we updated its contents
+	SlotList.MarkItemDirty(*TargetSlot);
 
 	PostItemReceived(Item);
 
@@ -140,7 +151,7 @@ TArray<UItemInstance*> FInventorySlotList::GetAllItems() const
 
 	// This should create a new array containing all UItemInstances that are present in 
 	// the slots of this SlotList.
-	for (const FInventorySlot& Slot : Entries)
+	for (const FInventorySlot& Slot : Items)
 	{
 		if (Slot.Item != nullptr)
 		{
@@ -152,12 +163,21 @@ TArray<UItemInstance*> FInventorySlotList::GetAllItems() const
 
 const TArray<FInventorySlot>& FInventorySlotList::GetAllSlots() const
 {
-	return Entries;
+	return Items;
 }
+
 
 void FInventorySlotList::PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize)
 {
-	INVENTORY_LOG(Log, TEXT("InventorySlotList::PreReplicatedRemove, owning inv: %s, has authority: %s"),
+	TArray<FString> IndexStrings;
+	for (int32 Index : RemovedIndices)
+	{
+		IndexStrings.Add(FString::FromInt(Index));
+	}
+	FString IndicesString = FString::Printf(TEXT("[%s]"), *FString::Join(IndexStrings, TEXT(", ")));
+
+	INVENTORY_LOG(Log, TEXT("FInventorySlotList::PreReplicatedRemove, removed indices = %s, owning inv: %s, has authority: %s"),
+		*IndicesString,
 		OwningInventory ? *OwningInventory->GetName() : TEXT("No owning inventory"),
 		OwningInventory ?
 		(OwningInventory->GetOwningActor()->HasAuthority() ? TEXT("True") : TEXT("False")) : TEXT("N/a"));
@@ -165,7 +185,15 @@ void FInventorySlotList::PreReplicatedRemove(const TArrayView<int32> RemovedIndi
 
 void FInventorySlotList::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize)
 {
-	INVENTORY_LOG(Log, TEXT("InventorySlotList::PostReplicatedAdd, owning inv: %s, has authority: %s"),
+	TArray<FString> IndexStrings;
+	for (int32 Index : AddedIndices)
+	{
+		IndexStrings.Add(FString::FromInt(Index));
+	}
+	FString IndicesString = FString::Printf(TEXT("[%s]"), *FString::Join(IndexStrings, TEXT(", ")));
+
+	INVENTORY_LOG(Log, TEXT("FInventorySlotList::PostReplicatedAdd, added indices = %s, owning inv: %s, has authority: %s"),
+		*IndicesString,
 		OwningInventory ? *OwningInventory->GetName() : TEXT("No owning inventory"),
 		OwningInventory ?
 		(OwningInventory->GetOwningActor()->HasAuthority() ? TEXT("True") : TEXT("False")) : TEXT("N/a"));
@@ -173,7 +201,15 @@ void FInventorySlotList::PostReplicatedAdd(const TArrayView<int32> AddedIndices,
 
 void FInventorySlotList::PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize)
 {
-	INVENTORY_LOG(Log, TEXT("InventorySlotList::PostReplicatedChange, owning inv: %s, has authority: %s"),
+	TArray<FString> IndexStrings;
+	for (int32 Index : ChangedIndices)
+	{
+		IndexStrings.Add(FString::FromInt(Index));
+	}
+	FString IndicesString = FString::Printf(TEXT("[%s]"), *FString::Join(IndexStrings, TEXT(", ")));
+
+	INVENTORY_LOG(Log, TEXT("FInventorySlotList::PostReplicatedChange, changed indices = %s, owning inv: %s, has authority: %s"),
+		*IndicesString,
 		OwningInventory ? *OwningInventory->GetName() : TEXT("No owning inventory"),
 		OwningInventory ?
 		(OwningInventory->GetOwningActor()->HasAuthority() ? TEXT("True") : TEXT("False")) : TEXT("N/a"));
@@ -181,7 +217,7 @@ void FInventorySlotList::PostReplicatedChange(const TArrayView<int32> ChangedInd
 
 bool FInventorySlotList::HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const
 {
-	for (const FInventorySlot& Slot : Entries)
+	for (const FInventorySlot& Slot : Items)
 	{
 		// if the slot is empty and doesn't block this item type
 		if (Slot.DoesPermitItemType(ItemTypeTag) && Slot.Item == nullptr)
@@ -193,26 +229,11 @@ bool FInventorySlotList::HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const
 	return false;
 }
 
-void FInventorySlotList::PutItemIntoSlot(FInventorySlot& TargetSlot, UItemInstance* InItemInstance)
-{
-	// Make sure this slot actually exists in the Entries array before proceeding
-	int32 SlotIndex = Entries.Find(TargetSlot);
-	checkf(SlotIndex != INDEX_NONE, TEXT("FInventorySlotList::PutItemIntoSlot called with a target slot that did not exist in Entries"));
 
-	// Validate slot is not empty & does not block item type
-	checkf(TargetSlot.IsSlotEmpty(), TEXT("FInventorySlotList::PutItemIntoSlot called but the target slot was not empty"));
-	checkf(TargetSlot.DoesPermitItemType(InItemInstance->GetItemTypeTag()), TEXT("FInventorySlotList::PutItemIntoSlot called but the target slot does not permit items of type %s"), *InItemInstance->GetItemTypeTag().ToString());
-
-	TargetSlot.Item = InItemInstance; // Update slot to point to the item instance
-	InItemInstance->OwningInventory = OwningInventory; // Update item instance to be owned by the inventory
-
-	// Mark the slot as dirty since we updated its contents
-	MarkItemDirty(TargetSlot);
-}
 
 void FInventorySlotList::AddEmptySlot(FInventorySlot Slot)
 {
-	Entries.Add(Slot);
+	Items.Add(Slot);
 }
 
 FString FInventorySlot::GetDebugString() const
@@ -259,4 +280,23 @@ FString FInventorySlot::GetDebugString() const
 	}
 
 	return DebugString;
+}
+
+void FInventorySlot::PreReplicatedRemove(const FInventorySlotList& InArraySerializer)
+{
+	INVENTORY_LOG(Log, TEXT("FInventorySlot::PreReplicatedRemove, item instance in slot: %s"),
+		Item ? *Item->GetName() : TEXT("No item"))
+
+}
+
+void FInventorySlot::PostReplicatedAdd(const FInventorySlotList& InArraySerializer)
+{
+	INVENTORY_LOG(Log, TEXT("FInventorySlot::PostReplicatedAdd, item instance in slot: %s"),
+		Item ? *Item->GetName() : TEXT("No item"))
+}
+
+void FInventorySlot::PostReplicatedChange(const FInventorySlotList& InArraySerializer)
+{
+	INVENTORY_LOG(Log, TEXT("FInventorySlot::PostReplicatedChange, item instance in slot: %s"),
+		Item ? *Item->GetName() : TEXT("No item"))
 }

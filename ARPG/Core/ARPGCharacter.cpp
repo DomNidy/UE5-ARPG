@@ -72,30 +72,32 @@ void AARPGCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	/*if (HasAuthority())
-	{
-		UE_LOG(LogTemp, Log, TEXT("\n--------------- Server Begin --------------- \n"));
-		AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>();
+	//if (HasAuthority())
+	//{
+	//	UE_LOG(LogTemp, Log, TEXT("\n--------------- Server Begin --------------- \n"));
+	//	AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>();
 
-		if (!PS) return;
-		if (!PS->GetInventorySystemComponent()) return;
+	//	if (!PS) return;
+	//	if (!PS->GetInventorySystemComponent()) return;
 
-		PS->GetInventorySystemComponent()->DebugDumpInventories();
-		UE_LOG(LogTemp, Log, TEXT("\n--------------- Server End --------------- \n"));
+	//	PS->GetInventorySystemComponent()->Set
 
-	}
-	else
-	{
-		UE_LOG(LogTemp, Log, TEXT("\n--------------- Client Begin --------------- \n"));
-		AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>();
+	//	PS->GetInventorySystemComponent()->DebugDumpInventories();
+	//	UE_LOG(LogTemp, Log, TEXT("\n--------------- Server End --------------- \n"));
 
-		if (!PS) return;
-		if (!PS->GetInventorySystemComponent()) return;
+	//}
+	//else
+	//{
+	//	UE_LOG(LogTemp, Log, TEXT("\n--------------- Client Begin --------------- \n"));
+	//	AARPGPlayerState* PS = GetPlayerState<AARPGPlayerState>();
 
-		PS->GetInventorySystemComponent()->DebugDumpInventories();
-		UE_LOG(LogTemp, Log, TEXT("\n--------------- Client End --------------- \n"));
+	//	if (!PS) return;
+	//	if (!PS->GetInventorySystemComponent()) return;
 
-	}*/
+	//	PS->GetInventorySystemComponent()->DebugDumpInventories();
+	//	UE_LOG(LogTemp, Log, TEXT("\n--------------- Client End --------------- \n"));
+
+	//}
 }
 
 void AARPGCharacter::BeginPlay()

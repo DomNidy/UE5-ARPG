@@ -37,7 +37,7 @@ class ARPG_API UItemInstance : public UObject
 	GENERATED_BODY()
 
 public:
-	UItemInstance(const FObjectInitializer& ObjectInitializer);
+	UItemInstance(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Networking
@@ -55,14 +55,11 @@ public:
 	 *	- Call is ignored if not on dedicated server or standalone
 	 *  - The resulting item has no owning Inventory.
 	 *
-	 * @param WorldContext This is used to provide context needed to create the item successfully.
-	 *	Since this is a static method, we have no knowledge about the state of the game world while running this method,
-	 *  and so, we use the WorldContext to retrieve this information.
-	 * @param ItemData Class of the item to create
+	 * @param WorldContext The outer of the newly created ItemInstance object
 	 * @param BaseItemData The UItemData this item should be initialized with
 	 * @return Pointer to the new item
 	 */
-	static UItemInstance* CreateItemInstance(const UWorld* WorldContext, TObjectPtr<UItemData> BaseItemData);
+	static UItemInstance* CreateItemInstance(UObject* Outer, TObjectPtr<UItemData> BaseItemData);
 
 protected:
 	/**
@@ -120,7 +117,7 @@ public:
 
 private:
 	friend UInventory;
-	
+
 	friend FInventorySlotList;
 
 	UPROPERTY(Replicated)
@@ -128,23 +125,23 @@ private:
 
 protected:
 	// Unique ID
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Classification")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Classification")
 	FGuid ItemId;
 
 	// Used by the filtering system and other systems to classify and query for items
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Classification")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Classification")
 	FGameplayTag ItemTypeTag;
 
 	// Localized name for display
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Basic")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Basic")
 	FText ItemDisplayName;
 
 	// Localized description
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Basic")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Basic")
 	FText ItemDescription;
 
 	// Icon displayed in UI inventory windows
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Visual")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Item|Item Properties|Visual")
 	UTexture2D* ItemIcon;
 
 protected:

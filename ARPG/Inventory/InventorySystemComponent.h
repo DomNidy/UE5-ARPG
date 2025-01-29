@@ -77,12 +77,12 @@ class ARPG_API UInventorySystemComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-protected:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
 	// Sets default values for this component's properties
 	UInventorySystemComponent();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	//~UObject interface
 	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
@@ -98,11 +98,11 @@ public:
 	//	Inventories
 	// ----------------------------------------------------------------------------------------------------------------
 	/**
-	 * @brief Creates an inventory grant and assigns it to this ISC. 
+	 * @brief Creates an inventory grant and assigns it to this ISC.
 	 *
-	 * If the owner actor is not authoritative, this is ignored. An owner actor is considered authoritative if it's net 
+	 * If the owner actor is not authoritative, this is ignored. An owner actor is considered authoritative if it's net
 	 * role (locally) is ENetRole::ROLE_Authority
-	 * 
+	 *
 	 *
 	 * @param Inventory The inventory we want to give this ASC access to.
 	 * @param PermissionSet Permission level that this ISC should have over the Inventory.

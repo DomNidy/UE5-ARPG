@@ -10,7 +10,10 @@ AARPGPlayerState::AARPGPlayerState()
 	SetNetUpdateFrequency(100.f);
 
 	bReplicates = true;
-	bReplicateUsingRegisteredSubObjectList = true;
+	//bReplicateUsingRegisteredSubObjectList = true;
+
+	PrimaryActorTick.bCanEverTick = true;
+
 
 	// ISC
 	InventorySystemComponent = CreateDefaultSubobject<UInventorySystemComponent>(TEXT("InventorySystemComponent"));
@@ -38,11 +41,40 @@ void AARPGPlayerState::PostInitializeComponents()
 
 	InitAbilitySystem();
 	InitInventorySystem();
+
+
+	TArray<FLifetimeProperty> Props;
+	InventorySystemComponent->GetLifetimeReplicatedProps(Props);
+
+	for (const auto& Prop : Props)
+	{
+		INVENTORY_LOG(Log, TEXT("Prop: %s"), *FString::FromInt(Prop.RepIndex));
+	}
 }
 
 void AARPGPlayerState::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+void AARPGPlayerState::Tick(float DeltaSeconds)
+{
+
+	//if (HasAuthority())
+	//{
+	//	if (!GetInventorySystemComponent())
+	//	{
+	//		INVENTORY_LOG_SCREEN(TEXT("no isc"));
+
+	//	}
+	//	if (!InventoriesToGrant[0])
+	//	{
+	//		INVENTORY_LOG_SCREEN(TEXT("no inv to grant"));
+	//	}
+	//	InventorySystemComponent->CreateAndGiveInventory(InventoriesToGrant[0], FInventoryPermissionSet());
+
+	//}
+
 }
 
 UAbilitySystemComponent* AARPGPlayerState::GetAbilitySystemComponent() const
@@ -156,8 +188,9 @@ void AARPGPlayerState::InitInventorySystem()
 
 			if (NewInventory)
 			{
+				UE_LOG(LogTemp, Log, TEXT("NEW INVENTORY NAME: %s"), *NewInventory->GetPathName());
 
-				UItemInstance* NewItemInstance = UItemInstance::CreateItemInstance(GetWorld(), ItemToGrant);
+				UItemInstance* NewItemInstance = UItemInstance::CreateItemInstance(this, ItemToGrant);
 
 				UE_LOG(LogTemp, Log, TEXT("Item instance outer before grant: %s"), *NewItemInstance->GetOuter()->GetName());
 
@@ -169,6 +202,7 @@ void AARPGPlayerState::InitInventorySystem()
 					UE_LOG(LogTemp, Log, TEXT("Inventory System Component outer: %s"), *InventorySystemComponent->GetOuter()->GetName());
 					UE_LOG(LogTemp, Log, TEXT("Inventory outer: %s"), *NewInventory->GetOuter()->GetName());
 					UE_LOG(LogTemp, Log, TEXT("Item instance outer after grant: %s"), *NewItemInstance->GetOuter()->GetName());
+
 					InventorySystemComponent->DebugDumpInventories();
 				}
 			}
