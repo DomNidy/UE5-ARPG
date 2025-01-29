@@ -61,6 +61,8 @@ void UItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 
 	DOREPLIFETIME(UItemInstance, Quantity);
 	DOREPLIFETIME(UItemInstance, MaxQuantity);
+	DOREPLIFETIME(UItemInstance, OwningInventory);
+
 }
 
 void UItemInstance::SetQuantity(int NewQuantity)

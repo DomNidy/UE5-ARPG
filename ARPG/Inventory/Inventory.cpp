@@ -7,6 +7,7 @@
 
 UInventory::UInventory(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
+
 }
 
 AActor* UInventory::GetOwningActor() const
@@ -36,6 +37,20 @@ UInventorySystemComponent* UInventory::GetOwningInventorySystemComponentChecked(
 {
 	check(OwningInventorySystemComponent != nullptr);
 	return OwningInventorySystemComponent;
+}
+
+void UInventory::PostInitProperties()
+{
+	Super::PostInitProperties();
+
+	INVENTORY_LOG(Log, TEXT("UInventory::PostInitProperties called on %s"), *GetName());
+
+	// Update the SlotList's owning inventory for instances (not the CDO)
+	if (!HasAnyFlags(RF_ClassDefaultObject))
+	{
+		INVENTORY_LOG(Log, TEXT("Set owning inventory to this: %s"), *GetName());
+		SlotList.OwningInventory = this;
+	}
 }
 
 bool UInventory::IsValidInventory() const
@@ -116,7 +131,6 @@ bool FInventorySlot::DoesPermitItemType(FGameplayTag ItemTypeTag) const
 	{
 		return false;
 	}
-
 	return true;
 }
 
@@ -143,14 +157,26 @@ const TArray<FInventorySlot>& FInventorySlotList::GetAllSlots() const
 
 void FInventorySlotList::PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize)
 {
+	INVENTORY_LOG(Log, TEXT("InventorySlotList::PreReplicatedRemove, owning inv: %s, has authority: %s"),
+		OwningInventory ? *OwningInventory->GetName() : TEXT("No owning inventory"),
+		OwningInventory ?
+		(OwningInventory->GetOwningActor()->HasAuthority() ? TEXT("True") : TEXT("False")) : TEXT("N/a"));
 }
 
 void FInventorySlotList::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize)
 {
+	INVENTORY_LOG(Log, TEXT("InventorySlotList::PostReplicatedAdd, owning inv: %s, has authority: %s"),
+		OwningInventory ? *OwningInventory->GetName() : TEXT("No owning inventory"),
+		OwningInventory ?
+		(OwningInventory->GetOwningActor()->HasAuthority() ? TEXT("True") : TEXT("False")) : TEXT("N/a"));
 }
 
 void FInventorySlotList::PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize)
 {
+	INVENTORY_LOG(Log, TEXT("InventorySlotList::PostReplicatedChange, owning inv: %s, has authority: %s"),
+		OwningInventory ? *OwningInventory->GetName() : TEXT("No owning inventory"),
+		OwningInventory ?
+		(OwningInventory->GetOwningActor()->HasAuthority() ? TEXT("True") : TEXT("False")) : TEXT("N/a"));
 }
 
 bool FInventorySlotList::HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const
@@ -182,6 +208,11 @@ void FInventorySlotList::PutItemIntoSlot(FInventorySlot& TargetSlot, UItemInstan
 
 	// Mark the slot as dirty since we updated its contents
 	MarkItemDirty(TargetSlot);
+}
+
+void FInventorySlotList::AddEmptySlot(FInventorySlot Slot)
+{
+	Entries.Add(Slot);
 }
 
 FString FInventorySlot::GetDebugString() const

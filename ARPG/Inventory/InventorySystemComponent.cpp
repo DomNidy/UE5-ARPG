@@ -23,7 +23,6 @@ bool UInventorySystemComponent::ReplicateSubobjects(UActorChannel* Channel, FOut
 	{
 		// Without this inventories won't replicate to client
 		WroteSomething |= Channel->ReplicateSubobject(Inventory, *Bunch, *RepFlags);
-
 	}
 
 	return WroteSomething;
@@ -51,6 +50,7 @@ void UInventorySystemComponent::ReadyForReplication()
 		{
 			if (IsValid(Inventory))
 			{
+				check(GetOwner());
 				AddReplicatedSubObject(Inventory);
 			}
 		}
@@ -119,7 +119,6 @@ UInventory* UInventorySystemComponent::CreateAndGiveInventory(TSubclassOf<UInven
 		Inventories.Add(Inventory);
 		InventoryGrants.Add(FInventoryGrant(PermissionSet));
 
-
 		if (IsUsingRegisteredSubObjectList() && IsReadyForReplication())
 		{
 			AddReplicatedSubObject(Inventory);
@@ -160,6 +159,18 @@ void UInventorySystemComponent::OnRep_Inventories()
 	check(!GetOwner()->HasAuthority());
 
 	INVENTORY_LOG(Log, TEXT("[CLIENT] OnRep_Inventories ran"));
+
+	for (const auto& Inventory : Inventories)
+	{
+		if (Inventory)
+		{
+			INVENTORY_LOG(Log, TEXT("\tGot inv: %s"), *Inventory->GetName());
+		}
+		else
+		{
+			INVENTORY_LOG_ERROR(TEXT("\tOnRep_Inventories had a null inventory"));
+		}
+	}
 }
 
 FString UInventorySystemComponent::GetDebugString() const

@@ -82,7 +82,8 @@ struct FInventorySlotList : public FFastArraySerializer
 
 	TArray<UItemInstance*> GetAllItems() const;
 	const TArray<FInventorySlot>& GetAllSlots() const;
-
+private:
+	friend UInventory;
 public:
 	//~ Begin FFastArraySerializer contract
 	void PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize);
@@ -92,17 +93,17 @@ public:
 
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
-		INVENTORY_LOG(Log, TEXT("FInventorySlotList::NetDeltaSerialize called!"));
 		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlot, FInventorySlotList>(Entries, DeltaParams, *this);
 	}
 public:
+	// ----------------------------------------------------------------------------------------------------------------
+	//	Slot management
+	// ----------------------------------------------------------------------------------------------------------------
 	/**
 	 * @brief Does this slot list have an empty item slot that can hold an item of
 	 * of ItemType. (i.e., it's not blocked by slot item filters).
 	 */
 	bool HasEmptySlotForItemType(FGameplayTag ItemTypeTag) const;
-private:
-	friend UInventory;
 private:
 	/**
 	 * @brief Updates the contents of the specified slot and then marks it dirty.
@@ -113,6 +114,11 @@ private:
 	 * @param InItemInstance The item we want to put into the slot
 	 */
 	void PutItemIntoSlot(FInventorySlot& TargetSlot, UItemInstance* InItemInstance);
+
+	/**
+	 * @brief Adds an empty slot to the slot list
+	 */
+	void AddEmptySlot(FInventorySlot Slot);
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Slots")
 	TArray<FInventorySlot> Entries;
@@ -190,6 +196,10 @@ public:
 	UInventorySystemComponent* GetOwningInventorySystemComponent() const;
 	UInventorySystemComponent* GetOwningInventorySystemComponentChecked() const;
 
+	//~Begin UObject Interface
+	virtual void PostInitProperties() override;
+	//~Begin UObject End
+
 	// ----------------------------------------------------------------------------------------------------------------
 	//	Networking
 	// ----------------------------------------------------------------------------------------------------------------
@@ -219,10 +229,8 @@ private:
 	/**
 	 * @brief Slots of the inventory, which may or may not contain an ItemInstance.
 	 */
-	UPROPERTY(Replicated, EditDefaultsOnly, Category = "Inventory|Slots")
+	UPROPERTY(Replicated, EditDefaultsOnly, Category = "Inventory")
 	FInventorySlotList SlotList;
-
-
 
 #pragma region ReceivingItems
 public:

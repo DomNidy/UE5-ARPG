@@ -122,6 +122,8 @@ private:
 	friend UInventory;
 	
 	friend FInventorySlotList;
+
+	UPROPERTY(Replicated)
 	UInventory* OwningInventory;
 
 protected:

@@ -135,7 +135,7 @@ void AARPGPlayerState::InitPlayerViewModels()
 
 void AARPGPlayerState::InitInventorySystem()
 {
-	if (!InventorySystemComponent)
+	if (!InventorySystemComponent || !HasAuthority())
 	{
 		return;
 	}
@@ -156,7 +156,7 @@ void AARPGPlayerState::InitInventorySystem()
 
 			if (NewInventory)
 			{
-				UE_LOG(LogTemp, Log, TEXT("NEW INVENTORY CREATED!"));
+
 				UItemInstance* NewItemInstance = UItemInstance::CreateItemInstance(GetWorld(), ItemToGrant);
 
 				UE_LOG(LogTemp, Log, TEXT("Item instance outer before grant: %s"), *NewItemInstance->GetOuter()->GetName());
